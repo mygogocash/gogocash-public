@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+# Throwaway devnet keypairs created by `npm run demo`. Never commit keys.
+.demo/
+.env
+.env.*
+*.keypair.json

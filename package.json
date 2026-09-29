@@ -1,0 +1,26 @@
+{
+  "name": "gogocash-solana-payout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GoGoCash hackathon slice: pay approved shopping cashback as a USDC stablecoin transfer on Solana.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "demo": "tsx scripts/demo.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@solana-mobile/mobile-wallet-adapter-protocol-web3js": "2.3.0",
+    "@solana/spl-token": "0.4.15",
+    "@solana/web3.js": "1.99.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "4.23.15",
+    "typescript": "^5.9.0",
+    "vitest": "5.0.2"
+  }
+}
