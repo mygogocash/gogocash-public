@@ -5,4 +5,16 @@ coverage/
 .demo/
 .env
 .env.*
+
+# Keys and signing material. Never commit any of these (see SECURITY.md).
+# solana-keygen and scripts write <name>-keypair.json, Anchor writes
+# target/deploy/<program>-keypair.json, and older tools use *.keypair.json.
 *.keypair.json
+*-keypair.json
+keys/
+credentials.json
+
+# Rust, Anchor and local-validator output.
+target/
+.anchor/
+test-ledger/

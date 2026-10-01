@@ -1,0 +1,42 @@
+# gitleaks configuration for gogocash-public.
+#
+# This repository is public and becomes the source of truth for the GoGoCash
+# Solana program, so a committed key would be exposed the moment it is pushed.
+# CI scans every commit with this file (.github/workflows/ci.yml), and
+# scripts/check-hygiene.mjs proves the custom rules below still fire.
+#
+# When you add an allowlist entry, say why. An allowlist entry is a claim that
+# a match is safe; never mute a rule wholesale to make CI green.
+
+title = "gogocash-public secret-scan rules"
+
+[extend]
+# Keep every upstream provider rule (AWS, GCP, Stripe, generic-api-key, jwt, ...).
+useDefault = true
+
+[[rules]]
+id = "solana-keypair-json"
+description = "Solana keypair file contents: a JSON array of exactly 64 byte values"
+# The format solana-keygen, Anchor and scripts/keygen.ts write. 64 bytes is a
+# full secret key (32-byte seed + 32-byte public key). Shorter arrays, such as
+# 8-byte discriminators or 32-byte seeds and public keys, do not match.
+regex = '''\[\s*(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\s*,\s*){63}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\s*\]'''
+
+[[rules]]
+id = "solana-secret-key-base58"
+description = "Base58 64-byte Solana secret key assigned to a key-like name"
+# A base58 64-byte key is 86-89 characters. Transaction signatures have the
+# same length but are public, so this rule only fires on a value assigned to a
+# secret-looking name (SOLANA_*_KEYPAIR=..., "secretKey": "...").
+regex = '''(?i)\b[a-z0-9_]*(?:secret[_-]?key|private[_-]?key|keypair)\b["']?\s*[:=]\s*["']?([1-9A-HJ-NP-Za-km-z]{86,89})\b'''
+secretGroup = 1
+keywords = ["secret", "private", "keypair"]
+
+[[allowlists]]
+description = "Verified non-secret paths"
+paths = [
+  # This config lists rule regexes; never scan it against itself.
+  '''(^|/)\.gitleaks\.toml$''',
+  # Lockfile: integrity hashes and resolved URLs, not secrets.
+  '''(^|/)package-lock\.json$''',
+]
