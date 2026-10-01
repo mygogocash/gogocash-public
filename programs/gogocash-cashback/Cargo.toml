@@ -1,0 +1,35 @@
+[package]
+name = "gogocash-cashback"
+version = "0.1.0"
+description = "GoGoCash cashback program (R1 stub: ping only)"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "gogocash_cashback"
+
+# Feature set copied from the anchor 1.2.0 template (`cargo_toml_v1`). The
+# macros emit cfgs for these names, so declaring them keeps `unexpected_cfgs`
+# quiet without a crate-level allow. Add "anchor-spl/idl-build" here when R2
+# adds anchor-spl.
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+# No `init-if-needed`: re-initialization attacks stay structurally impossible.
+anchor-lang = "=1.2.0"
+# 1.1.3 has no mandatory dependencies, so it cannot conflict with the
+# solana-* 3.x line anchor-lang 1.2 pins.
+solana-security-txt = "=1.1.3"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
