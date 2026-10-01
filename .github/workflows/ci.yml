@@ -1,0 +1,98 @@
+# CI for gogocash-public.
+#
+# Hardening rules for every workflow in this repository:
+#   - Actions are pinned by full commit SHA (the comment names the tag).
+#   - Downloaded binaries are checked against a SHA-256 before use; nothing is
+#     piped from curl into a shell.
+#   - No job receives secrets, and the token is read-only.
+#   - No `${{ }}` expression is expanded inside a `run:` script; values go
+#     through `env:` instead.
+#
+# The `ci` job at the bottom is the single status to require on `main`.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: secret scan (gitleaks, every commit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history: a key removed in a later commit is still published.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "26.5.1"
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          # 8.30.1, matching the GoGoCash monorepo. The checksum is the one
+          # gitleaks publishes in gitleaks_8.30.1_checksums.txt.
+          VERSION=8.30.1
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tgz
+          printf '%s  %s\n' '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' /tmp/gitleaks.tgz | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          sudo mv /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+      - name: Scan every commit
+        run: |
+          set -euo pipefail
+          # `gitleaks --config <missing>` falls back to default rules, so
+          # assert the config exists first.
+          test -f .gitleaks.toml
+          gitleaks git --config .gitleaks.toml --redact --no-banner .
+      - name: Ignore rules and custom secret-scan rules still catch key material
+        run: node scripts/check-hygiene.mjs
+
+  typescript:
+    name: typecheck and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "26.5.1"
+      # --ignore-scripts: no dependency lifecycle script runs in CI.
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+
+  ci:
+    name: ci
+    # Always report, so a failed or skipped dependency can't leave the
+    # required status missing instead of red.
+    if: always()
+    needs: [secrets, typescript]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          set -euo pipefail
+          echo "job results: ${RESULTS}"
+          for result in ${RESULTS}; do
+            if [ "${result}" != "success" ]; then
+              echo "::error::a required job finished as '${result}'"
+              exit 1
+            fi
+          done

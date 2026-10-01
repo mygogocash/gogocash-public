@@ -89,8 +89,9 @@ The public devnet faucet is rate limited. If the airdrop is refused, the demo pr
 
 ## Status and scope
 
-- **Devnet only.** The demo uses its own demo USDC mint, because devnet has no free official USDC. On mainnet, `usdcMint` is Circle's USDC mint and the treasury is a managed, funded wallet.
-- **What exists today:** the GoGoCash withdrawal system supports bank and PromptPay payouts, plus stablecoin payouts on EVM chains that are checked against the transaction receipt before settlement. This build brings the same receipt-checked model to Solana and Solana Mobile.
+- **Devnet only.** The demo creates its own 6-decimal demo USDC mint, so it runs without waiting on a faucet. Circle also runs a devnet USDC faucet (https://faucet.circle.com) for its official devnet USDC mint. On mainnet, `usdcMint` is Circle's USDC mint and the treasury is a managed, funded wallet.
+- **What exists today:** the GoGoCash withdrawal system supports bank and PromptPay payouts. EVM stablecoin payouts are sent by an admin: before settlement the system checks that the attached transaction succeeded onchain, but not yet the token transfer's amount or recipient, and the automatic EVM lane is switched off. This build goes further on Solana: `src/verify.ts` checks the mint, amount, source, signer, destination and memo before a payout counts as paid.
+- **Security:** see [SECURITY.md](SECURITY.md). The code is unaudited.
 - **Not in this repo:** the GoGoCash app, the ledger, affiliate network integrations, customer data, and any keys or infrastructure.
 
 ## Links
