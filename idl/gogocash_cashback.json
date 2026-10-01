@@ -1,0 +1,29 @@
+{
+  "address": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+  "metadata": {
+    "name": "gogocash_cashback",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "GoGoCash cashback program (R1 stub: ping only)"
+  },
+  "instructions": [
+    {
+      "name": "ping",
+      "docs": [
+        "Health check: logs a fixed message and touches no accounts."
+      ],
+      "discriminator": [
+        173,
+        0,
+        94,
+        236,
+        73,
+        133,
+        225,
+        153
+      ],
+      "accounts": [],
+      "args": []
+    }
+  ]
+}
