@@ -1,0 +1,39 @@
+# Program workspace for the GoGoCash cashback Solana program.
+#
+# Mirrors `anchor init` from otter-sec/anchor v1.2.0 (cli/src/template.rs,
+# `workspace_manifest`). The LiteSVM suite lives in tests-litesvm/, which is
+# its own cargo workspace, so it is excluded here.
+[workspace]
+members = [
+    "programs/*"
+]
+exclude = [
+    "tests-litesvm"
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.89.0"
+
+# solana-verify 0.5.2 reads this key to pick the build image when no
+# --base-image is given (for example a third party running verify-from-repo).
+# Without it the image would be inferred from Cargo.lock, where anchor 1.2's
+# solana-* 3.x crates would select a 3.x image instead of the Agave 4.3.0 one.
+# CI always passes the digest-pinned 4.3.0 image explicitly (docs/BUILD.md).
+[workspace.metadata.cli]
+solana = "4.3.0"
+
+# cargo-build-sbf reads this when --tools-version is not passed (the
+# solana-verify container build). It equals cargo-build-sbf 4.3.0's default.
+[workspace.metadata.solana]
+tools-version = "v1.57"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1

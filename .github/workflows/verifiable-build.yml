@@ -1,0 +1,214 @@
+# Verifiable build of the gogocash_cashback program with solana-verify 0.5.2
+# in the digest-pinned solana-verifiable-build 4.3.0 image (Agave 4.3.0,
+# platform-tools v1.57), for SBPFv3. The build job checks, hashes and uploads
+# the .so before any host-side third-party code runs. A second job, on its own
+# runner, downloads that artifact, proves it has the hash the build job
+# recorded, and runs the LiteSVM suite against it. A release is good only if
+# the whole run is green. It deploys nothing and uses no secrets.
+# See docs/BUILD.md.
+#
+# Hardening rules for every workflow in this repository (same as ci.yml):
+#   - Actions are pinned by full commit SHA (the comment names the tag).
+#   - Downloaded binaries are checked against a SHA-256 before use; nothing is
+#     piped from curl into a shell.
+#   - No job receives secrets, and the token is read-only.
+#   - No `${{ }}` expression is expanded inside a `run:` script; values go
+#     through `env:` instead.
+name: Verifiable build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verifiable-build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  # Must equal `channel` in rust-toolchain.toml; asserted below.
+  RUST_TOOLCHAIN: "1.97.1"
+  # From solana-verify-0.5.2-linux.sha256, published with the release.
+  SOLANA_VERIFY_VERSION: "0.5.2"
+  SOLANA_VERIFY_SHA256: "b9d5ccce9634dc14269cab3e7a58649bc141b3306e7735a94478c936341f211f"
+  # Docker Hub tag 4.3.0 of solanafoundation/solana-verifiable-build (Agave
+  # v4.3.0, rust 1.97.1, platform-tools v1.57). Pinned by digest because
+  # solana-verify 0.5.2 would otherwise infer a 3.x image from Cargo.lock.
+  # The same digest is solana-verify 0.5.2's IMAGE_MAP entry for 4.3.0.
+  VERIFY_IMAGE: "solanafoundation/solana-verifiable-build@sha256:12fd4c0a0790f0fc41ef74b0cdb6bccc167ba6137eb1adb749bac649481c86bd"
+  LIBRARY_NAME: gogocash_cashback
+
+jobs:
+  verifiable-build:
+    name: solana-verify build (SBPFv3)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    outputs:
+      sha256: ${{ steps.hash.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the host Rust toolchain
+        run: |
+          set -euo pipefail
+          grep -Fqx "channel = \"${RUST_TOOLCHAIN}\"" rust-toolchain.toml
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --component rustfmt,clippy
+          rustc --version
+          cargo --version
+      - name: Resolve the program lockfile (Cargo.lock)
+        run: |
+          set -euo pipefail
+          # solana-verify builds with --locked and requires Cargo.lock. A
+          # release is only reproducible from a committed lockfile.
+          if [ -f Cargo.lock ]; then
+            cargo metadata --locked --format-version 1 > /dev/null
+            echo "Cargo.lock is committed and current."
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "::error file=Cargo.lock::A tagged verifiable build needs a committed Cargo.lock."
+            exit 1
+          else
+            cargo generate-lockfile
+            echo "::warning file=Cargo.lock::Cargo.lock is not committed, so this run resolved a fresh one and is NOT reproducible. Commit Cargo.lock before tagging."
+          fi
+          sha256sum Cargo.lock
+          # Org rule: no crates.io package younger than 7 days.
+          node scripts/check-crate-age.mjs Cargo.lock
+      - name: Install solana-verify
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/solana-verify/bin"
+          cd "${RUNNER_TEMP}/solana-verify/bin"
+          curl -sSfL --retry 3 -o "solana-verify-${SOLANA_VERIFY_VERSION}-linux" \
+            "https://github.com/solana-foundation/solana-verifiable-build/releases/download/v${SOLANA_VERIFY_VERSION}/solana-verify-${SOLANA_VERIFY_VERSION}-linux"
+          echo "${SOLANA_VERIFY_SHA256}  solana-verify-${SOLANA_VERIFY_VERSION}-linux" | sha256sum -c -
+          mv "solana-verify-${SOLANA_VERIFY_VERSION}-linux" solana-verify
+          chmod 0755 solana-verify
+          echo "${RUNNER_TEMP}/solana-verify/bin" >> "${GITHUB_PATH}"
+          "${RUNNER_TEMP}/solana-verify/bin/solana-verify" --version
+      - name: Pull the build image by digest
+        run: |
+          set -euo pipefail
+          docker pull "${VERIFY_IMAGE}"
+          # docker/v4.3.0.Dockerfile at solana-verify v0.5.2 sets this label.
+          label="$(docker image inspect --format '{{index .Config.Labels "agave.version"}}' "${VERIFY_IMAGE}")"
+          echo "agave.version=${label}"
+          if [ "${label}" != "v4.3.0" ]; then
+            echo "::error::expected the Agave v4.3.0 image, got agave.version='${label}'"
+            exit 1
+          fi
+      - name: solana-verify build --arch v3
+        run: |
+          set -euo pipefail
+          # --arch v3: solana-verify 0.5.2 passes no --arch when it is omitted,
+          # and cargo-build-sbf 4.3.0 then defaults to v0.
+          solana-verify build \
+            --library-name "${LIBRARY_NAME}" \
+            --base-image "${VERIFY_IMAGE}" \
+            --arch v3
+      - name: Collect the artifact and delete the throwaway keypair
+        run: |
+          set -euo pipefail
+          out="${RUNNER_TEMP}/verifiable"
+          mkdir -p "${out}"
+          # The container wrote target/ as root.
+          sudo install -m 0644 -o "$(id -u)" -g "$(id -g)" \
+            "target/deploy/${LIBRARY_NAME}.so" "${out}/${LIBRARY_NAME}.so"
+          # cargo-build-sbf always writes a random target/deploy/<lib>-keypair.json.
+          # It is not the program's key and is never uploaded.
+          sudo find target -name '*-keypair.json' -type f -print -delete
+          ls -l "${out}"
+      - name: Check the artifact is SBPFv3 and embeds security.txt
+        run: |
+          set -euo pipefail
+          so="${RUNNER_TEMP}/verifiable/${LIBRARY_NAME}.so"
+          node --version
+          node scripts/check-sbpf.mjs --self-test
+          node scripts/check-sbpf.mjs --expect-security-txt "${so}"
+          if ! grep -qaF -e '=======BEGIN SECURITY.TXT V1=======' "${so}"; then
+            echo "::error::security.txt marker not found in the verifiable build"
+            exit 1
+          fi
+      # Hashed and uploaded in this job, before any host-side third-party code
+      # runs. The LiteSVM suite compiles and runs the build scripts and
+      # proc-macros of several hundred crates; it runs in a separate job on a
+      # separate runner, so it can never touch these bytes.
+      - name: Hash the artifact
+        id: hash
+        working-directory: ${{ runner.temp }}/verifiable
+        run: |
+          set -euo pipefail
+          sha256sum "${LIBRARY_NAME}.so" > "${LIBRARY_NAME}.so.sha256"
+          # solana-verify's program hash: the value `solana-verify
+          # get-program-hash` reports for a deployed program, which is not the
+          # same as the file's sha256.
+          solana-verify get-executable-hash "${LIBRARY_NAME}.so" > "${LIBRARY_NAME}.so.executable-hash"
+          cat "${LIBRARY_NAME}.so.sha256" "${LIBRARY_NAME}.so.executable-hash"
+          sha256="$(cut -d' ' -f1 "${LIBRARY_NAME}.so.sha256")"
+          if ! printf '%s' "${sha256}" | grep -Eqx '[0-9a-f]{64}'; then
+            echo "::error::unexpected sha256sum output: ${sha256}"
+            exit 1
+          fi
+          echo "sha256=${sha256}" >> "${GITHUB_OUTPUT}"
+      - name: Upload the verifiable build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gogocash_cashback-verifiable
+          path: |
+            ${{ runner.temp }}/verifiable/gogocash_cashback.so
+            ${{ runner.temp }}/verifiable/gogocash_cashback.so.sha256
+            ${{ runner.temp }}/verifiable/gogocash_cashback.so.executable-hash
+          if-no-files-found: error
+          retention-days: 90
+
+  litesvm:
+    name: LiteSVM tests (verifiable .so)
+    needs: verifiable-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the host Rust toolchain
+        run: |
+          set -euo pipefail
+          grep -Fqx "channel = \"${RUST_TOOLCHAIN}\"" rust-toolchain.toml
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --component rustfmt,clippy
+          rustc --version
+          cargo --version
+      - name: Download the verifiable build
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: gogocash_cashback-verifiable
+          path: ${{ runner.temp }}/verifiable
+      - name: Check the download is the bytes the build job hashed
+        working-directory: ${{ runner.temp }}/verifiable
+        env:
+          EXPECTED_SHA256: ${{ needs.verifiable-build.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          test -n "${EXPECTED_SHA256}"
+          echo "${EXPECTED_SHA256}  ${LIBRARY_NAME}.so" | sha256sum -c -
+          sha256sum -c "${LIBRARY_NAME}.so.sha256"
+          node "${GITHUB_WORKSPACE}/scripts/check-sbpf.mjs" --expect-security-txt "${LIBRARY_NAME}.so"
+      - name: Resolve the LiteSVM lockfile (tests-litesvm/Cargo.lock)
+        working-directory: tests-litesvm
+        run: |
+          set -euo pipefail
+          if [ ! -f Cargo.lock ]; then
+            echo "::warning file=tests-litesvm/Cargo.lock::tests-litesvm/Cargo.lock is not committed, so this run seeded one."
+          fi
+          bash ./seed-lockfile.sh
+          cargo metadata --locked --format-version 1 > /dev/null
+          node ../scripts/check-crate-age.mjs Cargo.lock
+      - name: cargo test (LiteSVM, against the verifiable .so)
+        working-directory: tests-litesvm
+        env:
+          GOGOCASH_CASHBACK_SO: ${{ runner.temp }}/verifiable/gogocash_cashback.so
+        run: cargo test --locked

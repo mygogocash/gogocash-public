@@ -1,0 +1,27 @@
+# Anchor 1.2 workspace config (format: otter-sec/anchor v1.2.0 cli/src/config.rs).
+#
+# Tests run in-process under LiteSVM, so `anchor test` must not start a
+# validator (same flag `anchor init --test-template litesvm` writes).
+skip_local_validator = true
+
+# There is deliberately no [toolchain] table. Anchor 1.2 applies it on every
+# command: on a `solana_version` mismatch it runs `agave-install` (a network
+# installer), and on an `anchor_version` mismatch it runs `avm install`. CI
+# installs and checksums Agave 4.3.0 and Anchor 1.2.0 itself instead.
+
+[features]
+resolution = true
+skip-lint = false
+
+# Placeholder id with no known private key; see programs/gogocash-cashback/src/lib.rs.
+[programs.localnet]
+gogocash_cashback = "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje"
+
+# Required by Anchor's config parser. `anchor build` never reads the wallet;
+# no wallet file exists in CI and none is needed.
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "cd tests-litesvm && cargo test"

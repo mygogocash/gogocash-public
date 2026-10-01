@@ -1,0 +1,14 @@
+# Host toolchain for rustfmt, clippy, the Anchor IDL build and the LiteSVM
+# suite. The SBF program itself is compiled by platform-tools v1.57 (Rust
+# 1.95.0), which cargo-build-sbf selects with `cargo +<toolchain>`.
+#
+# 1.97.1 is the toolchain Agave v4.3.0 pins (its rust-toolchain.toml) and the
+# base of the solana-verifiable-build 4.3.0 image (rust:1.97.1). It is above
+# anchor 1.2.0's MSRV (1.89.0, `ANCHOR_MSRV` in cli/src/template.rs) and above
+# what the Agave 4.2.x runtime crates under litesvm 0.16.0 need (1.96.1).
+#
+# CI asserts that `channel` equals RUST_TOOLCHAIN in the workflows.
+[toolchain]
+channel = "1.97.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

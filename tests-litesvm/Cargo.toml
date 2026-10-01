@@ -1,0 +1,40 @@
+# Standalone LiteSVM suite for the gogocash_cashback program.
+#
+# This is its own cargo workspace (and lockfile) on purpose: litesvm 0.16.0
+# runs the Agave 4.2 runtime and the solana-* 4.x SDK crates, while
+# anchor-lang 1.2.0 is pinned to the solana-* 3.x line. One lockfile for both
+# would drag the runtime graph into the program build.
+#
+# Before the first `cargo` command with no committed Cargo.lock, run
+# ./seed-lockfile.sh. It explains why a fresh resolution does not compile.
+[workspace]
+# Resolver 3 makes resolution MSRV-aware: it prefers crates whose declared
+# rust-version fits `rust-version` below (1.96.1, the Agave 4.2.x toolchain),
+# which keeps out the Agave 4.3.0 crates (rust-version 1.97.1) that litesvm
+# 0.16.0 was never ported to. The host toolchain is still 1.97.1
+# (rust-toolchain.toml at the repository root); this only steers resolution.
+resolver = "3"
+
+[package]
+name = "gogocash-cashback-litesvm-tests"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.96.1"
+publish = false
+
+[dependencies]
+solana-address = { version = "~2.6.1", features = ["decode"] }
+
+# Requirements match litesvm 0.16.0's own (crates/litesvm/Cargo.toml and the
+# workspace Cargo.toml at tag v0.16.0), tightened to the minor line its
+# Cargo.lock resolved, so they can only narrow litesvm's graph, never fork it.
+[dev-dependencies]
+litesvm = "=0.16.0"
+sha2 = "0.10.9"
+solana-instruction = "~3.4.1"
+solana-keypair = "~3.1.2"
+solana-message = "~4.4.1"
+solana-signer = "~3.0.1"
+# `Transaction::new` is behind the `wincode` feature in solana-transaction 4.1.
+solana-transaction = { version = "~4.1.6", features = ["wincode"] }
+solana-transaction-error = "~3.3.2"
