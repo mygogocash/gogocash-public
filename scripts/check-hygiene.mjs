@@ -111,6 +111,11 @@ function checkKeyMaterialIsCaught() {
   const { status, report, output } = scan({
     "devnet-wallet.json": `${JSON.stringify([...secretKey])}\n`,
     "settings.env": `SOLANA_CLAIM_AUTHORITY_KEYPAIR=${base58(randomBytes(64))}\n`,
+    // The public-address allowlist for *token_account keys must not let a
+    // 64-byte secret through under the same key name.
+    // Pretty-printed, one property per line, so the line has the same shape
+    // as a public address that the allowlist does accept.
+    "leaked-account.json": `${JSON.stringify({ recipient_token_account: base58(randomBytes(64)) }, null, 2)}\n`,
   });
   assert.equal(status, 1, `expected gitleaks to report leaks (exit 1), got ${status}\n${output}`);
   for (const [file, ruleId] of [
@@ -124,6 +129,12 @@ function checkKeyMaterialIsCaught() {
       )}`,
     );
   }
+  assert.ok(
+    report.some((f) => f.File === "leaked-account.json" && f.Secret === "REDACTED"),
+    `a 64-byte base58 value under a *token_account key must still be reported; got ${JSON.stringify(
+      report.map((f) => [f.File, f.RuleID]),
+    )}`,
+  );
 }
 
 function checkPublicDataIsNotFlagged() {
@@ -132,6 +143,10 @@ function checkPublicDataIsNotFlagged() {
       {
         programId: base58(randomBytes(32)),
         publicKey: base58(randomBytes(32)),
+        // A public associated token account. generic-api-key matches on the
+        // word "token" in the key name; docs/CONTRACT.md carries these.
+        recipient_token_account: base58(randomBytes(32)),
+        vault_token_account: base58(randomBytes(32)),
         discriminator: [...randomBytes(8)],
         pdaSeed: [...randomBytes(32)],
       },
