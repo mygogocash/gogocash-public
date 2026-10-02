@@ -50,8 +50,9 @@ consent message (exact bytes)
    │  src/siws.ts            render the SIWS message; the member signs it in their wallet;
    │                         strict Ed25519 verify (small-order, non-canonical, S >= L checks)
    ▼
-claim on the gogocash_cashback program (Anchor program and claim builder in progress)
+claim on the gogocash_cashback program (Anchor program in progress)
    │  src/program.ts         vault and receipt PDAs, account decoders
+   │  src/claim-tx.ts        the v0 claim transaction: CU limit and price, ATA, claim
    │  src/errors.ts          classify program, Anchor and instruction errors by number
    ▼
 finalized receipt account
@@ -68,6 +69,10 @@ ledger marks the payout paid
 | [`src/base58.ts`](src/base58.ts) | Strict base58 validator for addresses and signatures |
 | [`src/siws.ts`](src/siws.ts) | Consent message renderer and strict Ed25519 signature verification |
 | [`src/program.ts`](src/program.ts) | Vault and receipt PDAs (program id always passed in) and account decoders |
+| [`src/claim-tx.ts`](src/claim-tx.ts) | The claim transaction (v0, no lookup table, capped compute-unit limit and price, ATA then claim) |
+| [`src/wire.ts`](src/wire.ts) | Decodes a stored signed claim transaction and checks the release-proof preconditions |
+| [`src/events.ts`](src/events.ts) | `PayoutClaimed` event decoder (informational only) |
+| [`src/generated/`](src/generated) | Codama client generated from [`idl/gogocash_cashback.devnet.json`](idl/gogocash_cashback.devnet.json) (`npm run codama`) |
 | [`src/errors.ts`](src/errors.ts) | Error classification: retry, hold, needs review, already claimed, bug, config |
 | [`src/verify-receipt.ts`](src/verify-receipt.ts) | Receipt verification before a payout is marked paid |
 | [`src/release.ts`](src/release.ts) | The five-condition proof that a stuck payout can never land |

@@ -78,6 +78,20 @@ jobs:
         run: |
           set -euo pipefail
           npm query '[name=bigint-buffer], [name="@solana/web3.js"]' | jq -e 'length == 0'
+      # src/generated/ is committed. Regenerate it from the committed IDL and
+      # fail on any difference (changed, deleted or new file), so the client
+      # can't drift from idl/gogocash_cashback.devnet.json.
+      - name: Generated client matches the committed IDL
+        run: |
+          set -euo pipefail
+          npm run codama
+          git diff --exit-code -- src/generated
+          untracked="$(git ls-files --others --exclude-standard -- src/generated)"
+          if [ -n "${untracked}" ]; then
+            echo "::error::npm run codama wrote files that are not committed:"
+            echo "${untracked}"
+            exit 1
+          fi
       - run: npm run typecheck
       - run: npm test
       # Consumers load this package as TypeScript source. Node's type

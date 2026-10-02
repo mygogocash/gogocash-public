@@ -2,7 +2,10 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   AMOUNT_EXAMPLES,
+  CLAIM_DATA_VECTOR,
   CONSENT_EXAMPLE,
+  INSTRUCTION_DISCRIMINATORS_HEX,
+  PAYOUT_CLAIMED_VECTOR,
   PAYOUT_ID_HEX,
   PDA_VECTORS,
   PLACEHOLDER_PROGRAM_ID,
@@ -32,6 +35,19 @@ describe("test vectors are verbatim copies of docs/CONTRACT.md", () => {
       ]),
     ];
     for (const value of strings) expect(contract).toContain(value);
+  });
+
+  it("instruction, claim data and event vectors appear in the contract", () => {
+    for (const [name, discriminator] of Object.entries(INSTRUCTION_DISCRIMINATORS_HEX)) {
+      expect(contract).toContain(`| \`${name}\` | \`${discriminator}\` |`);
+    }
+    expect(contract).toContain(`\`\`\`\n${CLAIM_DATA_VECTOR.hex}\n\`\`\``);
+    expect(contract).toContain(`payout_id \`c6a87a9e...c88021\`, amount ${CLAIM_DATA_VECTOR.amount}, expires_at ${CLAIM_DATA_VECTOR.expiresAt}`);
+    expect(contract).toContain(`\`\`\`\n${PAYOUT_CLAIMED_VECTOR.base64}\n\`\`\``);
+    expect(contract).toContain(`\`event:PayoutClaimed\` = \`${PAYOUT_CLAIMED_VECTOR.discriminatorHex}\``);
+    expect(contract).toContain(
+      `claimed_at ${PAYOUT_CLAIMED_VECTOR.claimedAt}, day ${PAYOUT_CLAIMED_VECTOR.day}, first claim of the day`,
+    );
   });
 
   it("the worked consent example appears in the contract byte for byte", () => {
