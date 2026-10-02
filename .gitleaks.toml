@@ -33,6 +33,18 @@ secretGroup = 1
 keywords = ["secret", "private", "keypair"]
 
 [[allowlists]]
+description = "Public Solana token-account addresses (docs/CONTRACT.md, fixtures)"
+# generic-api-key matches the word "token" in names like
+# recipient_token_account and vault_token_account. Their values are 32-byte
+# public addresses: 32-44 base58 characters. A 64-byte secret key is 86-89
+# characters, so it never matches this and is still reported
+# (scripts/check-hygiene.mjs checks both directions).
+regexTarget = "line"
+regexes = [
+  '''(?i)token_account["']?\s*[:=]\s*["']?[1-9A-HJ-NP-Za-km-z]{32,44}["']?\s*,?\s*$''',
+]
+
+[[allowlists]]
 description = "Verified non-secret paths"
 paths = [
   # This config lists rule regexes; never scan it against itself.
