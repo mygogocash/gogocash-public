@@ -56,7 +56,9 @@ env:
   TRIVY_SHA256: "bbb64b9695866ce4a7a8f5c9592002c5961cab378577fa3f8a040df362b9b2ea"
   PROGRAM_SO: target/deploy/gogocash_cashback.so
   PROGRAM_IDL: target/idl/gogocash_cashback.json
-  COMMITTED_IDL: idl/gogocash_cashback.json
+  # Contract v0 §2.4 names the committed IDL per cluster; v0 builds devnet
+  # only (no `mainnet` feature).
+  COMMITTED_IDL: idl/gogocash_cashback.devnet.json
 
 jobs:
   lockfiles:
@@ -160,8 +162,27 @@ jobs:
           key: program-clippy-${{ runner.os }}-rust${{ env.RUST_TOOLCHAIN }}-anchor${{ env.ANCHOR_VERSION }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'programs/*/Cargo.toml') }}
           restore-keys: |
             program-clippy-${{ runner.os }}-rust${{ env.RUST_TOOLCHAIN }}-anchor${{ env.ANCHOR_VERSION }}-
+      # `!cancelled()`: lint and the feature check still report when rustfmt
+      # failed, so one run shows every finding. The job fails either way.
       - name: clippy (program workspace, host target)
+        if: ${{ !cancelled() }}
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: The mainnet feature is a compile_error! (contract v0 §2.4)
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/mainnet-feature.log"
+          if cargo check -p gogocash-cashback --features mainnet --locked > "${log}" 2>&1; then
+            cat "${log}"
+            echo "::error::building with --features mainnet must fail until a contract version assigns a mainnet program id"
+            exit 1
+          fi
+          if ! grep -qF 'contract v0 has no mainnet program id' "${log}"; then
+            cat "${log}"
+            echo "::error::--features mainnet failed, but not with the contract compile_error!"
+            exit 1
+          fi
+          echo "--features mainnet fails with the contract compile_error!, as required."
       - name: Save the cargo cache
         if: ${{ !cancelled() && steps.cargo-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -412,8 +433,38 @@ jobs:
         working-directory: tests-litesvm
         env:
           GOGOCASH_CASHBACK_SO: ${{ runner.temp }}/program/gogocash_cashback.so
-        run: cargo test --locked
+          # The suite writes compute units per instruction here (#2980).
+          GOGOCASH_CU_REPORT: ${{ runner.temp }}/cu-report.json
+        # --no-fail-fast: every test binary runs, so one run reports every
+        # failure. Any failure still fails the step.
+        run: cargo test --locked --no-fail-fast
+      - name: Publish the compute-unit report
+        if: ${{ !cancelled() }}
+        env:
+          CU_REPORT: ${{ runner.temp }}/cu-report.json
+        run: |
+          set -euo pipefail
+          if [ ! -s "${CU_REPORT}" ]; then
+            echo "::warning::no cu-report.json was written (the compute-unit test did not run to completion)"
+            exit 0
+          fi
+          cat "${CU_REPORT}"
+          {
+            echo '### Compute units per instruction (cu-report.json)'
+            echo '```json'
+            cat "${CU_REPORT}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload the compute-unit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cu-report
+          path: ${{ runner.temp }}/cu-report.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: clippy (tests-litesvm workspace)
+        if: ${{ !cancelled() }}
         working-directory: tests-litesvm
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Save the cargo cache

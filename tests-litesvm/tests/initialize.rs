@@ -155,6 +155,23 @@ fn i1_a_foreign_program_data_account_is_rejected() {
 }
 
 #[test]
+fn a_program_data_lookalike_not_owned_by_loader_v3_is_refused() {
+    // ProgramData spoofing: the right bytes (tag 3, our upgrade authority)
+    // in an account another program owns fail the owner check in S1.
+    let mut env = fx::Env::deployed();
+    let spoof = fx::random_address();
+    let authority = Some(env.upgrade_authority.pubkey());
+    let header = fx::program_data_metadata(0, authority).to_vec();
+    fx::put_account(&mut env.svm, spoof, fx::random_address(), header);
+    let mut accounts = env.initialize_accounts();
+    accounts.program_data = spoof;
+    let args = env.initialize_args();
+    let result = env.send_initialize(&accounts, &args, &[]);
+    let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
+    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+}
+
+#[test]
 fn the_program_account_is_not_accepted_as_program_data() {
     let mut env = fx::Env::deployed();
     let mut accounts = env.initialize_accounts();
@@ -243,6 +260,22 @@ fn a_vault_token_account_not_owned_by_the_vault_is_rejected() {
     let args = env.initialize_args();
     let result = env.send_initialize(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_TOKEN_OWNER;
+    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+}
+
+#[test]
+fn a_non_canonical_vault_token_account_is_rejected() {
+    // Vault ATA substitution: a classic token account of the right mint,
+    // owned by the vault, at an address that is not the canonical ATA.
+    let mut env = fx::Env::deployed();
+    let decoy = fx::random_address();
+    let state = fx::TokenAccountState::initialized(env.mint, env.vault, 0);
+    env.put_token_account(decoy, &state);
+    let mut accounts = env.initialize_accounts();
+    accounts.vault_token_account = decoy;
+    let args = env.initialize_args();
+    let result = env.send_initialize(&accounts, &args, &[]);
+    let code = fx::anchor_code::CONSTRAINT_ASSOCIATED;
     fx::expect_code(result, fx::INITIALIZE_INDEX, code);
 }
 

@@ -211,4 +211,14 @@ jobs:
         working-directory: tests-litesvm
         env:
           GOGOCASH_CASHBACK_SO: ${{ runner.temp }}/verifiable/gogocash_cashback.so
-        run: cargo test --locked
+          # Compute units per instruction of the verifiable build (#2980).
+          GOGOCASH_CU_REPORT: ${{ runner.temp }}/cu-report.json
+        run: cargo test --locked --no-fail-fast
+      - name: Upload the compute-unit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cu-report-verifiable
+          path: ${{ runner.temp }}/cu-report.json
+          if-no-files-found: warn
+          retention-days: 90

@@ -1,8 +1,12 @@
 # Building and verifying the gogocash_cashback program
 
 The onchain program lives in `programs/gogocash-cashback` (crate and library
-name `gogocash_cashback`). Today it is a stub with one instruction, `ping`,
-which logs `gogocash_cashback: ping v0`. The cashback logic comes in R2.
+name `gogocash_cashback`). It implements contract v0 (`docs/CONTRACT.md`
+section 3): eight instructions (`initialize`, `claim`, `pause`, `unpause`,
+`update_config`, `propose_admin`, `accept_admin`, `withdraw`), the `Vault` and
+`Receipt` accounts, the `PayoutClaimed` event and the error table 6000-6023.
+`docs/SECURITY-MODEL.md` maps each vulnerability class to the program check
+and the LiteSVM test that covers it.
 
 Every build runs in GitHub Actions. Nothing in this document needs a local
 Solana toolchain.
@@ -38,9 +42,9 @@ single required status. It fails unless every job below succeeded.
 | Job | What it proves |
 | --- | --- |
 | `lockfiles` | `Cargo.lock` and `tests-litesvm/Cargo.lock` resolve. If either is committed, it is current (`--locked`). Both are uploaded as the `cargo-lockfiles` artifact, and every other job uses exactly those. |
-| `fmt-clippy` | `cargo fmt --check` passes in both workspaces, and `cargo clippy --all-targets -- -D warnings` passes for the program. |
-| `build` | `anchor build --ignore-keys --arch v3` succeeds without changing `Cargo.lock`. `scripts/check-sbpf.mjs` shows that `target/deploy/gogocash_cashback.so` is SBPFv3, and the security.txt marker is in the binary. The IDL names the program and its `ping` instruction. Uploads the `.so` and the IDL as artifacts. |
-| `litesvm` | `cargo test` in `tests-litesvm/` against the `.so` that `build` uploaded: `ping` succeeds and logs its message, an unknown instruction is rejected, and the binary is SBPFv3. Clippy also runs for this workspace. |
+| `fmt-clippy` | `cargo fmt --check` passes in both workspaces, and `cargo clippy --all-targets -- -D warnings` passes for the program. `cargo check --features mainnet` must fail with the contract's `compile_error!` (contract v0 has no mainnet program id, §2.4). |
+| `build` | `anchor build --ignore-keys --arch v3` succeeds without changing `Cargo.lock`. `scripts/check-sbpf.mjs` shows that `target/deploy/gogocash_cashback.so` is SBPFv3, and the security.txt marker is in the binary. The IDL has exactly the 8 contract instructions with their §3.3 discriminators, plus `Vault`, `Receipt` and `PayoutClaimed`, and equals the committed `idl/gogocash_cashback.devnet.json`. Uploads the `.so` and the IDL as artifacts. |
+| `litesvm` | `cargo test --no-fail-fast` in `tests-litesvm/` against the `.so` that `build` uploaded: the artifact checks, every instruction's handler checks in contract order with their exact error codes and messages, the Anchor account checks, the contract's decode vectors, and the compute-unit budget (`claim` at most 45,000 CU). The suite writes `cu-report.json` (compute units per instruction, tied to the `.so` by its sha256), which the job prints in the run summary and uploads as the `cu-report` artifact. Clippy also runs for this workspace. |
 | `trivy` | No HIGH or CRITICAL advisory in `Cargo.lock` or `tests-litesvm/Cargo.lock`. |
 | `crate-age` | Every crates.io package in both lockfiles was published at least 7 days ago (the org's release-age hold), using the `pubtime` field of the crates.io sparse index. `scripts/check-crate-age.mjs` treats an unknown publish time as too new. |
 
@@ -56,11 +60,11 @@ values.
 
 ### The IDL
 
-`anchor build` writes `target/idl/gogocash_cashback.json`. Until
-`idl/gogocash_cashback.json` is committed, the IDL diff is skipped with a
-warning, and the generated IDL is in the `gogocash_cashback-idl` artifact.
-After you commit it, any IDL change fails CI until you update the committed
-copy in the same pull request.
+`anchor build` writes `target/idl/gogocash_cashback.json`. The committed copy
+is `idl/gogocash_cashback.devnet.json`, the per-cluster name contract v0 §2.4
+gives it (v0 builds devnet only). Any IDL change, including a doc comment on
+an instruction, an account or a field, fails CI until you update the committed
+copy in the same pull request from the `gogocash_cashback-idl` artifact.
 
 ### Why Trivy skips `package-lock.json`
 
@@ -70,9 +74,12 @@ lockfiles. Add the npm lockfile to the scan when R3 lands.
 
 ### Lockfiles
 
-Commit `Cargo.lock` and `tests-litesvm/Cargo.lock` from the first green run's
-`cargo-lockfiles` artifact. Until then, CI resolves them on every run and
-warns.
+`Cargo.lock` and `tests-litesvm/Cargo.lock` are committed, and every job
+checks them with `--locked`. They came from CI's `cargo-lockfiles` artifact;
+five crates in the fresh program lockfile were inside the 7-day hold and were
+pinned back to the previous release, with the checksum from the crates.io
+index (`lazy_static` 1.5.0, `solana-address` 2.8.0, `wincode` 0.6.1,
+`zerocopy` and `zerocopy-derive` 0.8.58).
 
 The host toolchain (Rust 1.97.1) has no stable setting that makes the
 resolver respect a minimum publish age, so a fresh resolution can pick up a

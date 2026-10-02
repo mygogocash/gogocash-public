@@ -152,23 +152,41 @@ fn a_replay_while_paused_still_reports_already_in_use() {
 
 #[test]
 fn c9_a_pre_funded_receipt_address_is_claimed() {
-    let mut env = fx::Env::live();
-    let recipient = fx::random_address();
-    let payout_id = fx::random_payout_id();
-    let accounts = env.claim_accounts(&recipient, &payout_id);
-    fx::fund_lamports(&mut env.svm, &accounts.receipt, 500_000);
-    let args = env.claim_args(payout_id, AMOUNT);
-    fx::expect_ok(env.send_claim(&accounts, &args, &[]));
-    let Some(receipt) = env.receipt_state(&payout_id) else {
-        panic!("the pre-funded receipt does not decode");
-    };
-    assert_eq!(receipt.amount, AMOUNT);
-    assert_eq!(receipt.recipient, recipient);
-    let Some(account) = env.svm.get_account(&accounts.receipt) else {
-        panic!("the receipt was not created");
-    };
-    assert_eq!(account.owner, fx::PROGRAM_ID);
-    assert!(account.lamports >= env.rent(fx::RECEIPT_SIZE));
+    // Anyone can send lamports to a known receipt address before the claim.
+    // A system transfer to a new, empty account must leave it rent-exempt,
+    // so the smallest pre-fund a stranger can land is the rent-exempt
+    // minimum for 0 bytes. The cases cover that minimum (the program tops up
+    // the rest), exactly the receipt's rent (no top-up) and far more than
+    // the rent. Anchor's `init` then takes the transfer + allocate + assign
+    // path instead of `create_account` (§3.3.2 CPIs).
+    for case in 0..3 {
+        let mut env = fx::Env::live();
+        let prefund = match case {
+            0 => env.rent(0),
+            1 => env.rent(fx::RECEIPT_SIZE),
+            _ => 10 * fx::LAMPORTS_PER_SOL,
+        };
+        let recipient = fx::random_address();
+        let payout_id = fx::random_payout_id();
+        let accounts = env.claim_accounts(&recipient, &payout_id);
+        fx::fund_lamports(&mut env.svm, &accounts.receipt, prefund);
+        let args = env.claim_args(payout_id, AMOUNT);
+        fx::expect_ok(env.send_claim(&accounts, &args, &[]));
+        let Some(receipt) = env.receipt_state(&payout_id) else {
+            panic!("the pre-funded receipt does not decode (prefund {prefund})");
+        };
+        assert_eq!(receipt.amount, AMOUNT);
+        assert_eq!(receipt.recipient, recipient);
+        let Some(account) = env.svm.get_account(&accounts.receipt) else {
+            panic!("the receipt was not created (prefund {prefund})");
+        };
+        assert_eq!(account.owner, fx::PROGRAM_ID);
+        assert!(account.lamports >= env.rent(fx::RECEIPT_SIZE));
+        assert!(account.lamports >= prefund);
+        let recipient_ata = accounts.recipient_token_account;
+        assert_eq!(env.token_balance(&recipient_ata), AMOUNT);
+        assert_eq!(env.vault_state().claim_count, 1);
+    }
 }
 
 #[test]
@@ -318,6 +336,80 @@ fn c4_a_non_canonical_vault_token_account_is_rejected() {
 }
 
 #[test]
+fn a_second_vault_cannot_spend_the_first_vaults_token_account() {
+    // Vault substitution: a second, live vault (another mint, same roles)
+    // names the first vault's funded token account. The seeds pass for the
+    // second vault, so C4 is what stops it.
+    let mut env = fx::Env::live();
+    let first_vault_ata = env.vault_token_account;
+    let other_mint = env.new_mint(fx::USDC_DECIMALS);
+    let (other_vault, _) = fx::vault_pda(&other_mint);
+    let mut init = env.initialize_accounts();
+    init.vault = other_vault;
+    init.mint = other_mint;
+    init.vault_token_account = fx::associated_token_address(&other_vault, &other_mint);
+    let args = env.initialize_args();
+    fx::expect_ok(env.send_initialize(&init, &args, &[]));
+    let unpause = fx::unpause_ix(&other_vault, &env.admin.pubkey());
+    fx::expect_ok(env.send(&[unpause], &[]));
+
+    let recipient = fx::random_address();
+    let payout_id = fx::random_payout_id();
+    let mut accounts = env.claim_accounts(&recipient, &payout_id);
+    accounts.vault = other_vault;
+    accounts.receipt = fx::receipt_pda(&other_vault, &payout_id).0;
+    accounts.mint = other_mint;
+    accounts.vault_token_account = first_vault_ata;
+    accounts.recipient_token_account = fx::associated_token_address(&recipient, &other_mint);
+    let args = env.claim_args(payout_id, AMOUNT);
+    let result = env.send_claim(&accounts, &args, &[]);
+    fx::expect_claim_error(result, fx::code::INVALID_VAULT_TOKEN_ACCOUNT);
+    assert_eq!(env.token_balance(&first_vault_ata), fx::VAULT_FUNDING);
+}
+
+#[test]
+fn a_vault_owned_by_another_program_is_refused() {
+    // A Vault-shaped account at the vault address that this program does
+    // not own fails the owner check in S1 (3007).
+    let mut env = fx::Env::deployed();
+    let vault = env.vault;
+    let data = fx::hex_decode(fx::vectors::VAULT_V1_HEX);
+    fx::put_account(&mut env.svm, vault, fx::random_address(), data);
+    let (_, result) = env.claim(&fx::random_address(), AMOUNT);
+    let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
+    fx::expect_code(result, fx::CLAIM_INDEX, code);
+}
+
+#[test]
+fn a_token_program_other_than_classic_token_is_refused() {
+    let mut env = fx::Env::live();
+    let payout_id = fx::random_payout_id();
+    let mut accounts = env.claim_accounts(&fx::random_address(), &payout_id);
+    accounts.token_program = fx::TOKEN_2022_PROGRAM_ID;
+    let args = env.claim_args(payout_id, AMOUNT);
+    let result = env.send_claim(&accounts, &args, &[]);
+    let code = fx::anchor_code::INVALID_PROGRAM_ID;
+    fx::expect_code(result, fx::CLAIM_INDEX, code);
+}
+
+#[test]
+fn a_token_2022_recipient_token_account_is_refused() {
+    let mut env = fx::Env::live();
+    let recipient = fx::random_address();
+    let token_2022_account = fx::random_address();
+    let state = fx::TokenAccountState::initialized(env.mint, recipient, 0);
+    let data = state.pack();
+    fx::put_account(&mut env.svm, token_2022_account, fx::TOKEN_2022_PROGRAM_ID, data);
+    let payout_id = fx::random_payout_id();
+    let mut accounts = env.claim_accounts(&recipient, &payout_id);
+    accounts.recipient_token_account = token_2022_account;
+    let args = env.claim_args(payout_id, AMOUNT);
+    let result = env.send_claim_only(&accounts, &args, &[]);
+    let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
+    fx::expect_code(result, 0, code);
+}
+
+#[test]
 fn the_vault_as_recipient_fails_the_system_owner_check() {
     // C5 also lists the vault, but a program-owned recipient already fails
     // `SystemAccount` in S1 (3011) before any handler check runs.
@@ -450,7 +542,10 @@ fn c11_c12_expiry_is_bounded_to_now_through_now_plus_900() {
         (now - 1, Some(fx::code::EXPIRED)),
         (now, None),
         (now + fx::MAX_EXPIRY_AHEAD, None),
-        (now + fx::MAX_EXPIRY_AHEAD + 1, Some(fx::code::EXPIRY_TOO_FAR)),
+        (
+            now + fx::MAX_EXPIRY_AHEAD + 1,
+            Some(fx::code::EXPIRY_TOO_FAR),
+        ),
     ];
     for (expires_at, expected) in cases {
         let payout_id = fx::random_payout_id();

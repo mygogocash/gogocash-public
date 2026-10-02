@@ -180,6 +180,29 @@ fn w8_total_withdrawn_overflow_is_math_overflow() {
 }
 
 #[test]
+fn a_token_program_other_than_classic_token_is_refused() {
+    let mut env = fx::Env::live();
+    let destination = admin_destination(&mut env);
+    let mut accounts = env.withdraw_accounts(&destination);
+    accounts.token_program = fx::TOKEN_2022_PROGRAM_ID;
+    let result = env.send(&[fx::withdraw_ix(&accounts, 1)], &[]);
+    let code = fx::anchor_code::INVALID_PROGRAM_ID;
+    fx::expect_code(result, 0, code);
+}
+
+#[test]
+fn the_admin_signature_is_required() {
+    let mut env = fx::Env::live();
+    let destination = admin_destination(&mut env);
+    let accounts = env.withdraw_accounts(&destination);
+    let mut ix = fx::withdraw_ix(&accounts, 1);
+    ix.accounts[1].is_signer = false;
+    let result = env.send(&[ix], &[]);
+    let code = fx::anchor_code::NOT_SIGNER;
+    fx::expect_code(result, 0, code);
+}
+
+#[test]
 fn the_vault_token_account_as_destination_is_a_duplicate() {
     let mut env = fx::Env::live();
     let vault_ata = env.vault_token_account;
