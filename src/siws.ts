@@ -7,10 +7,10 @@
  * sender re-renders them from the row's stored inputs; both sides must get
  * the same bytes, so nothing here depends on locale, clock or environment.
  */
-import { createPublicKey, verify as cryptoVerify } from "node:crypto";
 import { formatMinorFixed2, formatUsdcAtomicFixed6, U64_MAX } from "./amount.ts";
 import { isStrictBase58 } from "./base58.ts";
 import { isCluster, WALLET_CHAIN_ID, type Cluster } from "./clusters.ts";
+import { verifyEd25519Raw } from "./ed25519.ts";
 
 /** Hard cap on the message length, checked by the renderer and the verifier (section 4.1). */
 export const CONSENT_MESSAGE_MAX_BYTES = 1024;
@@ -198,8 +198,6 @@ export const SMALL_ORDER_PUBLIC_KEYS_HEX: readonly string[] = [
 const FIELD_P = (1n << 255n) - 19n;
 /** L = 2^252 + 27742317777372353535851937790883648493. */
 const GROUP_L = (1n << 252n) + 27742317777372353535851937790883648493n;
-/** DER SubjectPublicKeyInfo prefix for a raw 32-byte Ed25519 key. */
-const SPKI_PREFIX = Uint8Array.from(Buffer.from("302a300506032b6570032100", "hex"));
 
 function isUint8Array(value: unknown): value is Uint8Array {
   return value instanceof Uint8Array;
@@ -244,13 +242,5 @@ export function verifyConsentSignature(
   if (isNonCanonicalPointEncoding(publicKey)) return "A_non_canonical";
   if (isNonCanonicalPointEncoding(signature.subarray(0, 32))) return "R_non_canonical";
   if (readLittleEndian(signature.subarray(32, 64)) >= GROUP_L) return "S_not_reduced";
-  try {
-    const spki = new Uint8Array(SPKI_PREFIX.length + 32);
-    spki.set(SPKI_PREFIX, 0);
-    spki.set(publicKey, SPKI_PREFIX.length);
-    const key = createPublicKey({ key: Buffer.from(spki), format: "der", type: "spki" });
-    return cryptoVerify(null, message, key, signature) === true ? "ok" : "signature_invalid";
-  } catch {
-    return "signature_invalid";
-  }
+  return verifyEd25519Raw(publicKey, message, signature) ? "ok" : "signature_invalid";
 }

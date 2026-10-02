@@ -37,6 +37,41 @@ export const RECEIPT_HEX =
 export const VAULT_V1_HEX =
   "d308e82b0298757701fe01063b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7ad9e88ce36000f85568c63289a49ddb5ad5c2e62d1ef6ee076f8cf409e6538c6bb1f73e0018299d2baa571fb466bbc997d040e1dfcef3a49b10e363542b95c2a0000000000000000000000000000000000000000000000000000000000000000c659a02bdcd91d24d2608551c37a158ca8fe04fde0365b347de421756e22f2b70a955ff259cacd683426a5247f00cc6d836abe6e88a776cf86397852dbd90c04404b4c0000000000002d310100000000f850000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
 
+// Section 3.3: instruction discriminators and the claim data vector.
+export const INSTRUCTION_DISCRIMINATORS_HEX = {
+  initialize: "afaf6d1f0d989bed",
+  claim: "3ec6d6c1d59f6cd2",
+  pause: "d316ddfb4a79c12f",
+  unpause: "a99004260a8dbcff",
+  update_config: "1d9efcbf0a53db63",
+  propose_admin: "79d6c7d4572775ea",
+  accept_admin: "702a2d5a74b50daa",
+  withdraw: "b712469c946da122",
+} as const;
+export const CLAIM_DATA_VECTOR = {
+  payoutIdHex: PAYOUT_ID_HEX,
+  amount: 3558875n,
+  expiresAt: 1790910565n,
+  hex: "3ec6d6c1d59f6cd2c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021db4d3600000000006520bf6a00000000",
+} as const;
+
+// Section 3.4: the PayoutClaimed event vector (first claim of the day).
+export const PAYOUT_CLAIMED_VECTOR = {
+  discriminatorHex: "c8276970743f3a95",
+  base64:
+    "yCdpcHQ/OpUvpIRAZiyB8sbisxG+o+Rd4XcyW/Sq7bdpC7divXNZNSZSyR4+gTDyDOzyPXg1lEV8b3o70UKeY/qdK7VF4XBOxqh6nhcJlUOKeIdFh8uVdzqfp1LFsWM8nnriOSjIgCH7QtQau00vHa8hXJyZLyt3vVsoFR26Gk9qkVZpD+q/U9tNNgAAAAAAPh+/agAAAAD4UAAAAAAAANtNNgAAAAAAAQAAAAAAAADbTTYAAAAAAA==",
+  vault: PDA_VECTORS.devnet.vault.address,
+  receipt: PDA_VECTORS.devnet.receipt.address,
+  payoutIdHex: PAYOUT_ID_HEX,
+  recipient: TEST_SIGNER_1,
+  amount: 3558875n,
+  claimedAt: 1790910270n,
+  day: 20728n,
+  claimedToday: 3558875n,
+  claimCount: 1n,
+  totalClaimed: 3558875n,
+} as const;
+
 // Section 4.6: worked example `consent_devnet_thb_with_fee`.
 export const CONSENT_EXAMPLE = {
   input: {
