@@ -418,7 +418,9 @@ export async function verifyRowReceipt(input: {
   minContextSlot?: bigint;
 }): Promise<VerifyRowReceiptResult> {
   const binding = await checkDeploymentBinding(input.row, input.running);
-  if (!binding.ok) return { outcome: "deployment_mismatch", mismatched: binding.mismatched };
+  // `=== false`, not `!binding.ok`: the vendoring API typechecks with
+  // strictNullChecks off, where negation does not narrow the union.
+  if (binding.ok === false) return { outcome: "deployment_mismatch", mismatched: binding.mismatched };
   return verifyReceipt({
     rpc: input.rpc,
     cluster: input.row.cluster,

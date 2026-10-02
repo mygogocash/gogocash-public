@@ -10,7 +10,8 @@
   "scripts": {
     "codama": "node scripts/codama.ts idl/gogocash_cashback.devnet.json",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:consumer": "tsc -p tsconfig.consumer.json --noEmit"
   },
   "dependencies": {
     "@solana-program/compute-budget": "0.19.0",
