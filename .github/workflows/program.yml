@@ -300,12 +300,14 @@ jobs:
           set -euo pipefail
           test -s "${PROGRAM_IDL}"
           jq -c '{name: .metadata.name, instructions: [.instructions[] | {name, discriminator}]}' "${PROGRAM_IDL}"
-          # ping's discriminator is sha256("global:ping")[..8].
+          # Contract v0 §3.3: exactly these 8 instructions, in this order, plus
+          # the Vault and Receipt accounts and the PayoutClaimed event.
           if ! jq -e '.metadata.name == "gogocash_cashback"
-            and ([.instructions[].name] == ["ping"])
-            and (.instructions[0].discriminator == [173, 0, 94, 236, 73, 133, 225, 153])' \
+            and ([.instructions[].name] == ["initialize", "claim", "pause", "unpause", "update_config", "propose_admin", "accept_admin", "withdraw"])
+            and ([.accounts[].name] | index("Vault") != null and index("Receipt") != null)
+            and ([.events[].name] | index("PayoutClaimed") != null)' \
             "${PROGRAM_IDL}" > /dev/null; then
-            echo "::error file=${PROGRAM_IDL}::the IDL does not describe gogocash_cashback with a single ping instruction"
+            echo "::error file=${PROGRAM_IDL}::the IDL does not match contract v0 §3.3 (8 instructions in order, Vault, Receipt, PayoutClaimed)"
             exit 1
           fi
           if [ ! -f "${COMMITTED_IDL}" ]; then
