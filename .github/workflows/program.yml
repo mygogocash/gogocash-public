@@ -300,14 +300,25 @@ jobs:
           set -euo pipefail
           test -s "${PROGRAM_IDL}"
           jq -c '{name: .metadata.name, instructions: [.instructions[] | {name, discriminator}]}' "${PROGRAM_IDL}"
-          # Contract v0 §3.3: exactly these 8 instructions, in this order, plus
-          # the Vault and Receipt accounts and the PayoutClaimed event.
+          # Contract v0 §3.3: exactly these 8 instructions with these
+          # discriminators (sha256("global:<name>")[..8]), plus the Vault and
+          # Receipt accounts and the PayoutClaimed event. Anchor 1.2 writes
+          # IDL instructions in alphabetical order, so compare as a map.
           if ! jq -e '.metadata.name == "gogocash_cashback"
-            and ([.instructions[].name] == ["initialize", "claim", "pause", "unpause", "update_config", "propose_admin", "accept_admin", "withdraw"])
+            and ((.instructions | map({key: .name, value: .discriminator}) | from_entries) == {
+              "initialize": [175, 175, 109, 31, 13, 152, 155, 237],
+              "claim": [62, 198, 214, 193, 213, 159, 108, 210],
+              "pause": [211, 22, 221, 251, 74, 121, 193, 47],
+              "unpause": [169, 144, 4, 38, 10, 141, 188, 255],
+              "update_config": [29, 158, 252, 191, 10, 83, 219, 99],
+              "propose_admin": [121, 214, 199, 212, 87, 39, 117, 234],
+              "accept_admin": [112, 42, 45, 90, 116, 181, 13, 170],
+              "withdraw": [183, 18, 70, 156, 148, 109, 161, 34]
+            })
             and ([.accounts[].name] | index("Vault") != null and index("Receipt") != null)
             and ([.events[].name] | index("PayoutClaimed") != null)' \
             "${PROGRAM_IDL}" > /dev/null; then
-            echo "::error file=${PROGRAM_IDL}::the IDL does not match contract v0 §3.3 (8 instructions in order, Vault, Receipt, PayoutClaimed)"
+            echo "::error file=${PROGRAM_IDL}::the IDL does not match contract v0 §3.3 (8 instructions and discriminators, Vault, Receipt, PayoutClaimed)"
             exit 1
           fi
           if [ ! -f "${COMMITTED_IDL}" ]; then
