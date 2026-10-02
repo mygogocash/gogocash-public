@@ -1,0 +1,16 @@
+{
+  // The GoGoCash API vendors src/ byte for byte and typechecks it with its own
+  // loose settings (strict, strictNullChecks and noImplicitAny all off). Under
+  // strictNullChecks off, `if (!result.ok)` no longer narrows a discriminated
+  // union, so code that is clean here can break the API's typecheck. This
+  // config reproduces the consumer's settings for src/ only.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": false,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": ["src"]
+}

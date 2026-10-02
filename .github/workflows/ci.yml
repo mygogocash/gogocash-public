@@ -93,6 +93,8 @@ jobs:
             exit 1
           fi
       - run: npm run typecheck
+      # The API vendors src/ and typechecks it with strictNullChecks off.
+      - run: npm run typecheck:consumer
       - run: npm test
       # Consumers load this package as TypeScript source. Node's type
       # stripping must load the public API with no flags and no build step.
