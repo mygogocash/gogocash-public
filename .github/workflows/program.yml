@@ -30,7 +30,9 @@ permissions:
 
 concurrency:
   group: program-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded pull-request runs are cancelled; runs on main never are, so
+  # two merges in a row each get a complete result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -56,7 +58,9 @@ env:
   TRIVY_SHA256: "bbb64b9695866ce4a7a8f5c9592002c5961cab378577fa3f8a040df362b9b2ea"
   PROGRAM_SO: target/deploy/gogocash_cashback.so
   PROGRAM_IDL: target/idl/gogocash_cashback.json
-  COMMITTED_IDL: idl/gogocash_cashback.json
+  # Contract v0 §2.4 names the committed IDL per cluster; v0 builds devnet
+  # only (no `mainnet` feature).
+  COMMITTED_IDL: idl/gogocash_cashback.devnet.json
 
 jobs:
   lockfiles:
@@ -150,6 +154,7 @@ jobs:
         run: cargo fmt --all --check
       - name: Restore the cargo cache
         id: cargo-cache
+        if: ${{ !cancelled() }}
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -160,10 +165,29 @@ jobs:
           key: program-clippy-${{ runner.os }}-rust${{ env.RUST_TOOLCHAIN }}-anchor${{ env.ANCHOR_VERSION }}-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'programs/*/Cargo.toml') }}
           restore-keys: |
             program-clippy-${{ runner.os }}-rust${{ env.RUST_TOOLCHAIN }}-anchor${{ env.ANCHOR_VERSION }}-
+      # `!cancelled()`: lint and the feature check still report when rustfmt
+      # failed, so one run shows every finding. The job fails either way.
       - name: clippy (program workspace, host target)
+        if: ${{ !cancelled() }}
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: The mainnet feature is a compile_error! (contract v0 §2.4)
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/mainnet-feature.log"
+          if cargo check -p gogocash-cashback --features mainnet --locked > "${log}" 2>&1; then
+            cat "${log}"
+            echo "::error::building with --features mainnet must fail until a contract version assigns a mainnet program id"
+            exit 1
+          fi
+          if ! grep -qF 'contract v0 has no mainnet program id' "${log}"; then
+            cat "${log}"
+            echo "::error::--features mainnet failed, but not with the contract compile_error!"
+            exit 1
+          fi
+          echo "--features mainnet fails with the contract compile_error!, as required."
       - name: Save the cargo cache
-        if: ${{ !cancelled() && steps.cargo-cache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && steps.cargo-cache.outputs.cache-primary-key != '' && steps.cargo-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -300,17 +324,30 @@ jobs:
           set -euo pipefail
           test -s "${PROGRAM_IDL}"
           jq -c '{name: .metadata.name, instructions: [.instructions[] | {name, discriminator}]}' "${PROGRAM_IDL}"
-          # ping's discriminator is sha256("global:ping")[..8].
+          # Contract v0 §3.3: exactly these 8 instructions with these
+          # discriminators (sha256("global:<name>")[..8]), plus the Vault and
+          # Receipt accounts and the PayoutClaimed event. Anchor 1.2 writes
+          # IDL instructions in alphabetical order, so compare as a map.
           if ! jq -e '.metadata.name == "gogocash_cashback"
-            and ([.instructions[].name] == ["ping"])
-            and (.instructions[0].discriminator == [173, 0, 94, 236, 73, 133, 225, 153])' \
+            and ((.instructions | map({key: .name, value: .discriminator}) | from_entries) == {
+              "initialize": [175, 175, 109, 31, 13, 152, 155, 237],
+              "claim": [62, 198, 214, 193, 213, 159, 108, 210],
+              "pause": [211, 22, 221, 251, 74, 121, 193, 47],
+              "unpause": [169, 144, 4, 38, 10, 141, 188, 255],
+              "update_config": [29, 158, 252, 191, 10, 83, 219, 99],
+              "propose_admin": [121, 214, 199, 212, 87, 39, 117, 234],
+              "accept_admin": [112, 42, 45, 90, 116, 181, 13, 170],
+              "withdraw": [183, 18, 70, 156, 148, 109, 161, 34]
+            })
+            and ([.accounts[].name] | index("Vault") != null and index("Receipt") != null)
+            and ([.events[].name] | index("PayoutClaimed") != null)' \
             "${PROGRAM_IDL}" > /dev/null; then
-            echo "::error file=${PROGRAM_IDL}::the IDL does not describe gogocash_cashback with a single ping instruction"
+            echo "::error file=${PROGRAM_IDL}::the IDL does not match contract v0 §3.3 (8 instructions and discriminators, Vault, Receipt, PayoutClaimed)"
             exit 1
           fi
           if [ ! -f "${COMMITTED_IDL}" ]; then
-            echo "::warning file=${COMMITTED_IDL}::No committed IDL yet, so the IDL diff is SKIPPED. Commit gogocash_cashback.json from the gogocash_cashback-idl artifact as ${COMMITTED_IDL}."
-            exit 0
+            echo "::error file=${COMMITTED_IDL}::the committed IDL is missing. Commit gogocash_cashback.json from the gogocash_cashback-idl artifact as ${COMMITTED_IDL}."
+            exit 1
           fi
           diff -u "${COMMITTED_IDL}" "${PROGRAM_IDL}"
           echo "IDL matches ${COMMITTED_IDL}."
@@ -335,7 +372,7 @@ jobs:
       # private key must never reach the cache (the path exclusion above is a
       # second line of defence, not the first).
       - name: Save the cargo cache
-        if: ${{ !cancelled() && steps.scrub-keypair.outcome == 'success' && steps.cargo-cache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && steps.scrub-keypair.outcome == 'success' && steps.cargo-cache.outputs.cache-primary-key != '' && steps.cargo-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -382,7 +419,9 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/check-sbpf.mjs --expect-security-txt "${RUNNER_TEMP}/program/gogocash_cashback.so"
-          sha256sum "${RUNNER_TEMP}/program/gogocash_cashback.so"
+          # Recorded so the bytes can be re-checked after the suite's
+          # third-party build scripts have run on this runner.
+          sha256sum "${RUNNER_TEMP}/program/gogocash_cashback.so" | tee "${RUNNER_TEMP}/program.so.sha256"
       - name: Restore the cargo cache
         id: cargo-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -399,12 +438,59 @@ jobs:
         working-directory: tests-litesvm
         env:
           GOGOCASH_CASHBACK_SO: ${{ runner.temp }}/program/gogocash_cashback.so
-        run: cargo test --locked
+          # The suite writes compute units per instruction here (#2980).
+          GOGOCASH_CU_REPORT: ${{ runner.temp }}/cu-report.json
+        # --no-fail-fast: every test binary runs, so one run reports every
+        # failure. Any failure still fails the step.
+        run: cargo test --locked --no-fail-fast
+      - name: Re-check the tested binary
+        if: ${{ !cancelled() }}
+        env:
+          CU_REPORT: ${{ runner.temp }}/cu-report.json
+        run: |
+          set -euo pipefail
+          # The suite ran third-party build scripts on this runner; prove
+          # the bytes it tested are still the ones the build job produced.
+          sha256sum -c "${RUNNER_TEMP}/program.so.sha256"
+          if [ -s "${CU_REPORT}" ]; then
+            expected="$(cut -d' ' -f1 "${RUNNER_TEMP}/program.so.sha256")"
+            reported="$(jq -r .so_sha256 "${CU_REPORT}")"
+            if [ "${reported}" != "${expected}" ]; then
+              echo "::error::cu-report.json names .so ${reported}, but the tested binary is ${expected}"
+              exit 1
+            fi
+          fi
+      - name: Publish the compute-unit report
+        if: ${{ !cancelled() }}
+        env:
+          CU_REPORT: ${{ runner.temp }}/cu-report.json
+        run: |
+          set -euo pipefail
+          if [ ! -s "${CU_REPORT}" ]; then
+            echo "::warning::no cu-report.json was written (the compute-unit test did not run to completion)"
+            exit 0
+          fi
+          cat "${CU_REPORT}"
+          {
+            echo '### Compute units per instruction (cu-report.json)'
+            echo '```json'
+            cat "${CU_REPORT}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+      - name: Upload the compute-unit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cu-report
+          path: ${{ runner.temp }}/cu-report.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: clippy (tests-litesvm workspace)
+        if: ${{ !cancelled() }}
         working-directory: tests-litesvm
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Save the cargo cache
-        if: ${{ !cancelled() && steps.cargo-cache.outputs.cache-hit != 'true' }}
+        if: ${{ !cancelled() && steps.cargo-cache.outputs.cache-primary-key != '' && steps.cargo-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |

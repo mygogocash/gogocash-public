@@ -22,15 +22,27 @@ edition = "2021"
 rust-version = "1.96.1"
 publish = false
 
-[dependencies]
-solana-address = { version = "~2.6.1", features = ["decode"] }
-
+# Everything is a normal dependency because src/lib.rs holds the shared
+# fixtures (instruction builders, decoders, the LiteSVM environment) and a
+# library cannot use dev-dependencies. This crate is never published.
+#
 # Requirements match litesvm 0.16.0's own (crates/litesvm/Cargo.toml and the
 # workspace Cargo.toml at tag v0.16.0), tightened to the minor line its
 # Cargo.lock resolved, so they can only narrow litesvm's graph, never fork it.
-[dev-dependencies]
+# Every crate here is already in litesvm's graph; none adds a package to the
+# lockfile. SPL Token and the ATA program come from the ELFs litesvm 0.16.0
+# bundles (src/programs/elf), so no spl-* crate is needed.
+[dependencies]
 litesvm = "=0.16.0"
 sha2 = "0.10.9"
+# `Account` for `LiteSVM::set_account`.
+solana-account = "~4.3.2"
+# `copy` and `curve25519` (find_program_address) are already enabled in
+# litesvm's graph; naming them here keeps the fixtures from relying on
+# feature unification.
+solana-address = { version = "~2.6.1", features = ["copy", "curve25519", "decode"] }
+# `Clock` for `LiteSVM::get_sysvar` / `set_sysvar` (the UTC day roll).
+solana-clock = "~3.1.1"
 solana-instruction = "~3.4.1"
 solana-keypair = "~3.1.2"
 solana-message = "~4.4.1"
