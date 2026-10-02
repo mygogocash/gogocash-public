@@ -66,7 +66,7 @@ never paid twice.
 | 30 | Layout drift between program and clients | Compile-time assertions on the discriminators and on 324 / 89 bytes; decode vectors from CONTRACT.md §3.2 and §3.4 reproduced byte for byte | `initialize::initialize_reproduces_the_contract_vault_vector`, `claim::claim_reproduces_the_contract_receipt_and_event_vectors`, `initialize::initialize_creates_a_paused_vault_with_the_contract_layout` |
 | 31 | Wrong binary at the address, malformed input | Anchor's program-id check (4100), dispatch (101; data shorter than 8 bytes also gives 101 on Anchor 1.2.0, see the note below) and Borsh decode (102); exactly the 8 v0 instructions; no legacy IDL or event-CPI entrypoint | `artifact::the_binary_refuses_to_run_under_another_program_id`, `artifact::unknown_discriminator_is_rejected`, `artifact::the_r1_ping_stub_is_gone`, `artifact::data_shorter_than_a_discriminator_never_dispatches`, `artifact::malformed_claim_arguments_are_rejected`, `artifact::every_v0_instruction_is_dispatched` |
 | 32 | Non-deterministic error reporting | Handler checks run in the fixed §3.3 order, one code each; each test breaks two adjacent checks at once and expects the earlier code | `claim::handler_checks_run_in_contract_order`, `claim::c2_to_c13_run_in_contract_order`, `initialize::i1_to_i7_run_in_contract_order`, `admin::g1_to_g4_run_in_contract_order`, `admin::a1_before_a2_and_b1_before_b2`, `withdraw::w1_to_w8_run_in_contract_order` |
-| 33 | Compute exhaustion | `claim` at most 45,000 CU (24,616 with the contract payout-id vector, at most 35,116 over 32 random payout ids in CI); every instruction is written to `cu-report.json` | `claim::compute_units_are_reported_and_claim_fits_the_budget` |
+| 33 | Compute exhaustion | `claim` at most 45,000 CU: 24,616 with the contract payout-id vector, and the worst of 32 random payout ids is held to the same budget (26,116 to 35,116 observed in CI); every instruction is written to `cu-report.json` | `claim::compute_units_are_reported_and_claim_fits_the_budget` |
 | 36 | Under-funded payer | The receipt rent comes from `payer` through `init`; a payer that cannot fund it fails with system `Custom(1)` "insufficient lamports" at the claim index (§3.7, class hold) and nothing is written | `claim::a_payer_that_cannot_fund_the_receipt_rent_is_refused` |
 | 34 | Unverifiable or mis-built artifact | SBPFv3 (`e_flags == 3`), embedded `security.txt`, upgradeable deployment with its ProgramData; `--features mainnet` is a `compile_error!` (CI step) | `artifact::artifact_is_sbpf_v3_and_embeds_security_txt`, `artifact::program_is_deployed_upgradeable_with_its_program_data` |
 | 35 | Supply chain | Committed lockfiles checked with `--locked`; every crates.io package at least 7 days old (`crate-age`); Trivy on both lockfiles; SHA-pinned actions and checksummed toolchains; reproducible build with `solana-verify --arch v3` in a digest-pinned image | CI jobs `crate-age`, `trivy`, `lockfiles`, `build`, and the verifiable-build workflow |
@@ -105,6 +105,10 @@ version.
   procedure in the SDK and the rail; the `PayoutClaimed` event is
   informational only, because logs can be truncated.
 - **Compute units vary with the receipt bump:** `init` searches for the
-  canonical receipt bump, so `claim` costs a little more for payout ids whose
-  bump is low. The budget leaves about 19,000 CU of headroom.
+  canonical receipt bump, about 1,500 CU per extra attempt, so `claim` costs
+  more for payout ids whose bump is low. With the first candidate bump
+  (255) `claim` costs about 18,600 CU; exceeding the 45,000 target needs 18
+  more attempts (a canonical bump of 237 or lower), which happens for about
+  one payout id in 260,000. The rail's compute-unit limit (60,000, §9.1)
+  leaves more room still.
 - **No audit yet:** the program must be audited before it holds mainnet funds.
