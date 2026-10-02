@@ -1,3 +1,14 @@
+// Example only. Not part of the SDK, not exported from src/index.ts, and not
+// typechecked or tested: tsconfig.json excludes examples/.
+//
+// It still imports @solana-mobile/mobile-wallet-adapter-protocol-web3js and
+// @solana/web3.js v1, which the SDK dropped (web3.js v1 pulls in bigint-buffer,
+// CVE-2025-3194). Neither package is installed in this repository any more, so
+// this file no longer compiles here. It is kept to show the Mobile Wallet
+// Adapter authorize step. The app's real wallet code follows docs/CONTRACT.md
+// section 10 (the plain @solana-mobile/mobile-wallet-adapter-protocol package,
+// signMessages only, no transaction signing).
+
 import { transact } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
 import { PublicKey } from "@solana/web3.js";
 
