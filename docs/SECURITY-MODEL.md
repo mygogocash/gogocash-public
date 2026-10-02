@@ -25,7 +25,12 @@ the `solana-verify` artifact (`.github/workflows/verifiable-build.yml`).
 | Payer | any key | fund the receipt rent and the fee | anything else; receive the payout (C5) |
 
 A leaked claim key is bounded by `max_per_claim`, `max_per_day`, the vault
-float and the guardian's pause. Every payout it lands still needs a receipt
+float and the guardian's pause. The daily cap is a fixed UTC-day bucket (C9),
+not a rolling window, so the worst case is **2 × `max_per_day` in any rolling
+24 hours**: a full day's cap just before 00:00 UTC and another just after it,
+seconds apart. Size the vault float, the off-chain alerts and the guardian's
+reaction time for that figure (for P1's 20 USDC daily cap, 40 USDC), and
+expect the peak around midnight UTC. Every payout it lands still needs a receipt
 whose `(payout_id, recipient, amount)` matches a ledger row before the row is
 paid (CONTRACT.md §3.8), so a front-run of a known `payout_id` is detected and
 never paid twice.
