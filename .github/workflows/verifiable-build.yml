@@ -214,6 +214,24 @@ jobs:
           # Compute units per instruction of the verifiable build (#2980).
           GOGOCASH_CU_REPORT: ${{ runner.temp }}/cu-report.json
         run: cargo test --locked --no-fail-fast
+      - name: Re-check the tested binary
+        if: ${{ !cancelled() }}
+        working-directory: ${{ runner.temp }}/verifiable
+        env:
+          EXPECTED_SHA256: ${{ needs.verifiable-build.outputs.sha256 }}
+          CU_REPORT: ${{ runner.temp }}/cu-report.json
+        run: |
+          set -euo pipefail
+          # The suite ran third-party build scripts on this runner; prove
+          # the bytes it tested are still the verified ones.
+          echo "${EXPECTED_SHA256}  ${LIBRARY_NAME}.so" | sha256sum -c -
+          if [ -s "${CU_REPORT}" ]; then
+            reported="$(jq -r .so_sha256 "${CU_REPORT}")"
+            if [ "${reported}" != "${EXPECTED_SHA256}" ]; then
+              echo "::error::cu-report.json names .so ${reported}, but the verified binary is ${EXPECTED_SHA256}"
+              exit 1
+            fi
+          fi
       - name: Upload the compute-unit report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

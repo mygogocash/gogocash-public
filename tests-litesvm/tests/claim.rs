@@ -64,6 +64,14 @@ fn claim_pays_once_writes_the_receipt_and_emits_payout_claimed() {
         total_claimed: AMOUNT,
     };
     assert_eq!(fx::payout_claimed_events(&meta.logs), [event]);
+
+    // §3.3.2: the event is emitted after the transfer.
+    let token_success = format!("Program {} success", fx::TOKEN_PROGRAM_ID);
+    let transfer_done = meta.logs.iter().rposition(|line| *line == token_success);
+    let prefix = fx::PROGRAM_DATA_LOG_PREFIX;
+    let emitted = meta.logs.iter().position(|line| line.starts_with(prefix));
+    let ordered = matches!((transfer_done, emitted), (Some(t), Some(e)) if t < e);
+    assert!(ordered, "{}", meta.pretty_logs());
 }
 
 #[test]
@@ -237,7 +245,83 @@ fn the_claim_authority_must_sign() {
     let ata = fx::create_ata_idempotent(&payer, &accounts.recipient, &accounts.mint);
     let result = env.send(&[ata, claim], &[]);
     let code = fx::anchor_code::NOT_SIGNER;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "claim_authority");
+}
+
+#[test]
+fn the_payer_must_sign() {
+    let mut env = fx::Env::live();
+    let payout_id = fx::random_payout_id();
+    let mut accounts = env.claim_accounts(&fx::random_address(), &payout_id);
+    accounts.payer = fx::random_address();
+    let args = env.claim_args(payout_id, AMOUNT);
+    let mut claim = fx::claim_ix(&accounts, &args);
+    claim.accounts[7].is_signer = false;
+    let payer = env.payer.pubkey();
+    let ata = fx::create_ata_idempotent(&payer, &accounts.recipient, &accounts.mint);
+    let result = env.send(&[ata, claim], &[]);
+    let code = fx::anchor_code::NOT_SIGNER;
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "payer");
+}
+
+#[test]
+fn an_uninitialized_vault_is_refused() {
+    // §3.6 3012: no vault exists for the mint yet.
+    let mut env = fx::Env::deployed();
+    let (_, result) = env.claim(&fx::random_address(), AMOUNT);
+    let code = fx::anchor_code::NOT_INITIALIZED;
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "vault");
+}
+
+#[test]
+fn a_payer_that_cannot_fund_the_receipt_rent_is_refused() {
+    // §3.7: system Custom(1) "insufficient lamports" at the claim index
+    // (class hold: top up the fee payer). Nothing is written.
+    let mut env = fx::Env::live();
+    let poor = Keypair::new();
+    let rent_for_nothing = env.rent(0);
+    fx::fund_lamports(&mut env.svm, &poor.pubkey(), rent_for_nothing);
+    let recipient = fx::random_address();
+    env.create_ata(&recipient);
+    let payout_id = fx::random_payout_id();
+    let mut accounts = env.claim_accounts(&recipient, &payout_id);
+    accounts.payer = poor.pubkey();
+    let args = env.claim_args(payout_id, AMOUNT);
+    let result = env.send_claim_only(&accounts, &args, &[&poor]);
+    let failed = fx::expect_code(result, 0, fx::SYSTEM_INSUFFICIENT_LAMPORTS);
+    let reported = fx::logs_contain(&failed.meta.logs, fx::INSUFFICIENT_LAMPORTS_LOG);
+    assert!(reported, "{}", failed.meta.pretty_logs());
+    assert_eq!(env.receipt_state(&payout_id), None);
+    assert_eq!(env.vault_state().claim_count, 0);
+}
+
+#[test]
+fn token_2022_mint_or_vault_token_account_is_refused() {
+    // Token-2022 accounts fail the classic-Token owner check in S1 (3007)
+    // in whichever field they are passed.
+    for field in ["mint", "vault_token_account"] {
+        let mut env = fx::Env::live();
+        let recipient = fx::random_address();
+        env.create_ata(&recipient);
+        let address = if field == "mint" {
+            env.mint
+        } else {
+            env.vault_token_account
+        };
+        let Some(mut account) = env.svm.get_account(&address) else {
+            panic!("no {field} account at {address}");
+        };
+        account.owner = fx::TOKEN_2022_PROGRAM_ID;
+        if let Err(err) = env.svm.set_account(address, account) {
+            panic!("cannot rewrite {field}: {err}");
+        }
+        let payout_id = fx::random_payout_id();
+        let accounts = env.claim_accounts(&recipient, &payout_id);
+        let args = env.claim_args(payout_id, AMOUNT);
+        let result = env.send_claim_only(&accounts, &args, &[]);
+        let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
+        fx::expect_account_error(result, 0, code, field);
+    }
 }
 
 #[test]
@@ -252,7 +336,7 @@ fn the_vault_must_be_writable() {
     let ata = fx::create_ata_idempotent(&payer, &accounts.recipient, &accounts.mint);
     let result = env.send(&[ata, claim], &[]);
     let code = fx::anchor_code::CONSTRAINT_MUT;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "vault");
     assert_eq!(env.vault_state().claim_count, 0);
 }
 
@@ -311,6 +395,86 @@ fn handler_checks_run_in_contract_order() {
 }
 
 #[test]
+fn c2_to_c13_run_in_contract_order() {
+    // Each case breaks two adjacent checks at once; the earlier one is the
+    // error. With `handler_checks_run_in_contract_order` this covers every
+    // adjacent pair of C1-C15 that can fail together (C7/C8 and C11/C12
+    // cannot: one amount or one expiry cannot fail both).
+    let mut env = fx::Env::live();
+    let mint = env.mint;
+    let other_mint = env.new_mint(fx::USDC_DECIMALS);
+    let stranger = Keypair::new();
+    let recipient = fx::random_address();
+    let payer = env.payer.pubkey();
+    let decoy = fx::random_address();
+    let decoy_state = fx::TokenAccountState::initialized(env.mint, env.vault, fx::VAULT_FUNDING);
+    env.put_token_account(decoy, &decoy_state);
+    let payout_id = fx::random_payout_id();
+    let args = env.claim_args(payout_id, AMOUNT);
+
+    // C2 before C3: a stranger signs and the stored mint differs.
+    env.patch_vault_address(fx::vault_offset::MINT, &other_mint);
+    let mut accounts = env.claim_accounts(&recipient, &payout_id);
+    accounts.claim_authority = stranger.pubkey();
+    let result = env.send_claim(&accounts, &args, &[&stranger]);
+    fx::expect_claim_error(result, fx::code::INVALID_CLAIM_AUTHORITY);
+
+    // C3 before C4: the stored mint differs and the vault ATA is a decoy.
+    let mut accounts = env.claim_accounts(&recipient, &payout_id);
+    accounts.vault_token_account = decoy;
+    let result = env.send_claim(&accounts, &args, &[]);
+    fx::expect_claim_error(result, fx::code::INVALID_MINT);
+    env.patch_vault_address(fx::vault_offset::MINT, &mint);
+
+    // C4 before C5: the vault ATA is a decoy and the payer is the recipient.
+    let mut accounts = env.claim_accounts(&payer, &payout_id);
+    accounts.vault_token_account = decoy;
+    let result = env.send_claim(&accounts, &args, &[]);
+    fx::expect_claim_error(result, fx::code::INVALID_VAULT_TOKEN_ACCOUNT);
+
+    // C5 before C6: the payer is the recipient and the payout id is zero.
+    let zero_id = [0u8; 32];
+    let accounts = env.claim_accounts(&payer, &zero_id);
+    let zero_args = env.claim_args(zero_id, AMOUNT);
+    let result = env.send_claim(&accounts, &zero_args, &[]);
+    fx::expect_claim_error(result, fx::code::INVALID_RECIPIENT);
+
+    // C8 before C10: above the per-claim cap with the day already full.
+    let accounts = env.claim_accounts(&recipient, &payout_id);
+    let full_day = fx::DEFAULT_MAX_PER_DAY;
+    env.patch_vault_u64(fx::vault_offset::CLAIMED_TODAY, full_day);
+    let over = env.claim_args(payout_id, fx::DEFAULT_MAX_PER_CLAIM + 1);
+    let result = env.send_claim(&accounts, &over, &[]);
+    fx::expect_claim_error(result, fx::code::EXCEEDS_MAX_PER_CLAIM);
+
+    // C10 before C11: the day is full and the claim has expired.
+    let mut expired = env.claim_args(payout_id, 1);
+    expired.expires_at = env.now() - 1;
+    let result = env.send_claim(&accounts, &expired, &[]);
+    fx::expect_claim_error(result, fx::code::DAY_CAP_EXCEEDED);
+
+    // C9 before C11: the day counter would overflow and the claim expired.
+    env.patch_vault_u64(fx::vault_offset::CLAIMED_TODAY, u64::MAX);
+    let result = env.send_claim(&accounts, &expired, &[]);
+    fx::expect_claim_error(result, fx::code::MATH_OVERFLOW);
+    env.patch_vault_u64(fx::vault_offset::CLAIMED_TODAY, 0);
+
+    // C12 before C13: the expiry is too far ahead and the vault ATA is frozen.
+    let vault_ata = env.vault_token_account;
+    env.freeze(&vault_ata);
+    let mut too_far = env.claim_args(payout_id, 1);
+    too_far.expires_at = env.now() + fx::MAX_EXPIRY_AHEAD + 1;
+    let result = env.send_claim(&accounts, &too_far, &[]);
+    fx::expect_claim_error(result, fx::code::EXPIRY_TOO_FAR);
+    env.thaw(&vault_ata);
+
+    // The same payout id still pays once every check passes.
+    fx::expect_ok(env.send_claim(&accounts, &args, &[]));
+    let recipient_ata = accounts.recipient_token_account;
+    assert_eq!(env.token_balance(&recipient_ata), AMOUNT);
+}
+
+#[test]
 fn a_different_mint_cannot_address_the_vault() {
     // S4: the vault seeds bind it to its mint.
     let mut env = fx::Env::live();
@@ -323,7 +487,7 @@ fn a_different_mint_cannot_address_the_vault() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_SEEDS;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "vault");
 }
 
 #[test]
@@ -393,7 +557,7 @@ fn a_vault_owned_by_another_program_is_refused() {
     fx::put_account(&mut env.svm, vault, fx::random_address(), data);
     let (_, result) = env.claim(&fx::random_address(), AMOUNT);
     let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "vault");
 }
 
 #[test]
@@ -405,7 +569,7 @@ fn a_token_program_other_than_classic_token_is_refused() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim(&accounts, &args, &[]);
     let code = fx::anchor_code::INVALID_PROGRAM_ID;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "token_program");
 }
 
 #[test]
@@ -427,7 +591,7 @@ fn a_token_2022_recipient_token_account_is_refused() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim_only(&accounts, &args, &[]);
     let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
-    fx::expect_code(result, 0, code);
+    fx::expect_account_error(result, 0, code, "recipient_token_account");
 }
 
 #[test]
@@ -441,7 +605,7 @@ fn the_vault_as_recipient_fails_the_system_owner_check() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim(&accounts, &args, &[]);
     let code = fx::anchor_code::NOT_SYSTEM_OWNED;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "recipient");
 }
 
 #[test]
@@ -629,7 +793,7 @@ fn a_missing_recipient_ata_is_not_initialized() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim_only(&accounts, &args, &[]);
     let code = fx::anchor_code::NOT_INITIALIZED;
-    fx::expect_code(result, 0, code);
+    fx::expect_account_error(result, 0, code, "recipient_token_account");
 }
 
 #[test]
@@ -645,7 +809,7 @@ fn a_non_canonical_recipient_token_account_is_rejected() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim_only(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_ASSOCIATED;
-    fx::expect_code(result, 0, code);
+    fx::expect_account_error(result, 0, code, "recipient_token_account");
 }
 
 #[test]
@@ -663,7 +827,7 @@ fn a_re_owned_recipient_ata_fails_at_the_ata_instruction() {
     fx::expect_code(result, 0, fx::ATA_INVALID_OWNER);
     let result = env.send_claim_only(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_TOKEN_OWNER;
-    fx::expect_code(result, 0, code);
+    fx::expect_account_error(result, 0, code, "recipient_token_account");
 }
 
 #[test]
@@ -675,7 +839,7 @@ fn the_vault_token_account_as_recipient_account_is_a_duplicate() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim(&accounts, &args, &[]);
     let code = fx::anchor_code::DUPLICATE_MUTABLE_ACCOUNT;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "recipient_token_account");
 }
 
 #[test]
@@ -687,7 +851,7 @@ fn a_non_canonical_receipt_address_is_rejected() {
     let args = env.claim_args(payout_id, AMOUNT);
     let result = env.send_claim(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_SEEDS;
-    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    fx::expect_account_error(result, fx::CLAIM_INDEX, code, "receipt");
 }
 
 #[test]

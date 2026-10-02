@@ -47,11 +47,11 @@ fn a_receipt_is_not_accepted_as_a_vault() {
     let guardian = env.guardian.pubkey();
     let result = env.send(&[fx::pause_ix(&receipt, &guardian)], &[]);
     let code = fx::anchor_code::ACCOUNT_DISCRIMINATOR_MISMATCH;
-    fx::expect_code(result, 0, code);
+    fx::expect_account_error(result, 0, code, "vault");
     let admin = env.admin.pubkey();
     let update = env.update_config_args();
     let ix = fx::update_config_ix(&receipt, &admin, &update);
-    fx::expect_code(env.send(&[ix], &[]), 0, code);
+    fx::expect_account_error(env.send(&[ix], &[]), 0, code, "vault");
     assert!(env.receipt_state(&payout_id).is_some());
 }
 
@@ -231,6 +231,75 @@ fn g4_caps_must_be_non_zero_and_ordered() {
     let state = env.vault_state();
     assert_eq!(state.max_per_claim, fx::DEFAULT_MAX_PER_CLAIM);
     assert_eq!(state.max_per_day, fx::DEFAULT_MAX_PER_DAY);
+}
+
+#[test]
+fn g1_to_g4_run_in_contract_order() {
+    // Each case breaks two adjacent checks at once; the earlier one is the
+    // error (§3.3.0 S5).
+    let mut env = fx::Env::initialized();
+    let vault = env.vault;
+    let admin = env.admin.pubkey();
+    let guardian = env.guardian.pubkey();
+
+    // G1 before G2: the guardian signs a default guardian.
+    let mut update = env.update_config_args();
+    update.guardian = Address::default();
+    let ix = fx::update_config_ix(&vault, &guardian, &update);
+    fx::expect_program_error(env.send(&[ix], &[]), 0, fx::code::NOT_ADMIN);
+
+    // G2 before G3: a default guardian and the admin as claim authority.
+    update.claim_authority = admin;
+    let ix = fx::update_config_ix(&vault, &admin, &update);
+    fx::expect_program_error(env.send(&[ix], &[]), 0, fx::code::INVALID_ROLE);
+
+    // G3 before G4: the admin as claim authority and both caps 0.
+    let mut update = env.update_config_args();
+    update.claim_authority = admin;
+    update.max_per_claim = 0;
+    update.max_per_day = 0;
+    let ix = fx::update_config_ix(&vault, &admin, &update);
+    fx::expect_program_error(env.send(&[ix], &[]), 0, fx::code::ROLE_CONFLICT);
+}
+
+#[test]
+fn a1_before_a2_and_b1_before_b2() {
+    let mut env = fx::Env::initialized();
+    let vault = env.vault;
+    let guardian = env.guardian.pubkey();
+    let claim_authority = env.claim_authority.pubkey();
+
+    // A1 before A2: the guardian proposes the claim authority.
+    let ix = fx::propose_admin_ix(&vault, &guardian, &claim_authority);
+    fx::expect_program_error(env.send(&[ix], &[]), 0, fx::code::NOT_ADMIN);
+
+    // B1 before B2: the claim authority accepts with nothing pending.
+    let ix = fx::accept_admin_ix(&vault, &claim_authority);
+    let code = fx::code::NOT_PENDING_ADMIN;
+    fx::expect_program_error(env.send(&[ix], &[]), 0, code);
+}
+
+#[test]
+fn every_admin_instruction_requires_its_signature() {
+    let mut env = fx::Env::live();
+    let vault = env.vault;
+    let admin = env.admin.pubkey();
+    let guardian = env.guardian.pubkey();
+    let stranger = fx::random_address();
+    let update = env.update_config_args();
+    let cases = [
+        (fx::pause_ix(&vault, &guardian), "authority"),
+        (fx::unpause_ix(&vault, &admin), "admin"),
+        (fx::update_config_ix(&vault, &admin, &update), "admin"),
+        (fx::propose_admin_ix(&vault, &admin, &stranger), "admin"),
+        (fx::accept_admin_ix(&vault, &stranger), "new_admin"),
+    ];
+    for (mut ix, signer) in cases {
+        ix.accounts[1].is_signer = false;
+        let code = fx::anchor_code::NOT_SIGNER;
+        fx::expect_account_error(env.send(&[ix], &[]), 0, code, signer);
+    }
+    assert!(!env.vault_state().paused);
 }
 
 #[test]

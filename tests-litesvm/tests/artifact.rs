@@ -7,9 +7,7 @@
 //! `GOGOCASH_CASHBACK_SO` at the exact .so it built and checked.
 
 use gogocash_cashback_litesvm_tests as fx;
-use solana_instruction::error::InstructionError;
 use solana_signer::Signer;
-use solana_transaction_error::TransactionError;
 
 #[test]
 fn artifact_is_sbpf_v3_and_embeds_security_txt() {
@@ -94,22 +92,17 @@ fn the_r1_ping_stub_is_gone() {
 
 #[test]
 fn data_shorter_than_a_discriminator_never_dispatches() {
-    // §3.6 lists 100 (InstructionMissing) for this case. The Anchor 1.2.0
-    // dispatcher (lang/syn/src/codegen/program/dispatch.rs) has no length
-    // check and falls through to 101 (InstructionFallbackNotFound), so both
-    // are accepted here. §3.6 classifies both, and neither reaches a handler.
+    // §3.6 lists 100 (InstructionMissing) for this case, but the Anchor
+    // 1.2.0 dispatcher (lang/syn/src/codegen/program/dispatch.rs) has no
+    // length check: data shorter than 8 bytes matches no discriminator and
+    // falls through to 101 (InstructionFallbackNotFound). This pins the
+    // pinned toolchain's real behavior; the §3.6 row is a contract erratum
+    // to fix in the next contract version. Neither code reaches a handler,
+    // and both halt the rail (101 is `config`, 100 is `bug`).
     let mut env = fx::Env::deployed();
     let result = env.send(&[fx::raw_ix(vec![1, 2, 3, 4])], &[]);
-    let Err(failed) = result else {
-        panic!("4 bytes of instruction data must not dispatch");
-    };
-    let code = match failed.err {
-        TransactionError::InstructionError(0, InstructionError::Custom(code)) => code,
-        other => panic!("unexpected error {other:?}"),
-    };
-    let missing = fx::anchor_code::INSTRUCTION_MISSING;
-    let fallback = fx::anchor_code::FALLBACK_NOT_FOUND;
-    assert!(code == missing || code == fallback, "code {code}");
+    let code = fx::anchor_code::FALLBACK_NOT_FOUND;
+    fx::expect_code(result, 0, code);
 }
 
 #[test]

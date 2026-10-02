@@ -505,6 +505,12 @@ pub mod anchor_code {
 /// System program `AccountAlreadyInUse` (`Custom(0)`, §3.7).
 pub const SYSTEM_ALREADY_IN_USE: u32 = 0;
 
+/// System program `ResultWithNegativeLamports` (`Custom(1)`, §3.7).
+pub const SYSTEM_INSUFFICIENT_LAMPORTS: u32 = 1;
+
+/// Log text that accompanies [`SYSTEM_INSUFFICIENT_LAMPORTS`] (§3.7).
+pub const INSUFFICIENT_LAMPORTS_LOG: &str = "insufficient lamports";
+
 /// Log text that accompanies [`SYSTEM_ALREADY_IN_USE`] (open item O6).
 pub const ALREADY_IN_USE_LOG: &str = "already in use";
 
@@ -1313,6 +1319,26 @@ pub fn expect_program_error(
     if !logs_contain(&failed.meta.logs, &needle) {
         let logs = failed.meta.pretty_logs();
         panic!("missing Anchor error log `{needle}`\n{logs}");
+    }
+    failed
+}
+
+/// Asserts an Anchor account error: `InstructionError(index, Custom(code))`
+/// plus Anchor's log line naming the failing account
+/// (`AnchorError caused by account: <account>. Error Code: ...`), so the test
+/// proves which account tripped the check.
+#[track_caller]
+pub fn expect_account_error(
+    result: TransactionResult,
+    index: u8,
+    code: u32,
+    account: &str,
+) -> FailedTransactionMetadata {
+    let failed = expect_code(result, index, code);
+    let needle = format!("AnchorError caused by account: {account}. Error Code:");
+    if !logs_contain(&failed.meta.logs, &needle) {
+        let logs = failed.meta.pretty_logs();
+        panic!("missing Anchor log `{needle}`\n{logs}");
     }
     failed
 }

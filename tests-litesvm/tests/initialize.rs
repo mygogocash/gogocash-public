@@ -7,6 +7,31 @@ use solana_address::Address;
 use solana_keypair::Keypair;
 use solana_signer::Signer;
 
+/// The vault `initialize` must write for `args` in `env` (§3.3.1 effects).
+fn expected_vault(env: &fx::Env, args: &fx::InitializeArgs) -> fx::VaultState {
+    fx::VaultState {
+        discriminator: fx::VAULT_DISCRIMINATOR,
+        version: 1,
+        bump: env.vault_bump,
+        paused: true,
+        decimals: fx::USDC_DECIMALS,
+        mint: env.mint,
+        vault_token_account: env.vault_token_account,
+        admin: args.admin,
+        pending_admin: Address::default(),
+        guardian: args.guardian,
+        claim_authority: args.claim_authority,
+        max_per_claim: args.max_per_claim,
+        max_per_day: args.max_per_day,
+        current_day: fx::utc_day(fx::NOW),
+        claimed_today: 0,
+        total_claimed: 0,
+        claim_count: 0,
+        total_withdrawn: 0,
+        reserved: [0; 64],
+    }
+}
+
 #[test]
 fn initialize_creates_a_paused_vault_with_the_contract_layout() {
     let mut env = fx::Env::deployed();
@@ -94,8 +119,7 @@ fn i8_a_stranger_pre_creating_the_vault_ata_does_not_block_initialize() {
     let accounts = env.initialize_accounts();
     let args = env.initialize_args();
     fx::expect_ok(env.send_initialize(&accounts, &args, &[]));
-    let stored = env.vault_state().vault_token_account;
-    assert_eq!(stored, env.vault_token_account);
+    assert_eq!(env.vault_state(), expected_vault(&env, &args));
 }
 
 #[test]
@@ -111,9 +135,10 @@ fn i9_a_pre_funded_vault_pda_is_initialized() {
             panic!("the vault was not created");
         };
         assert_eq!(account.owner, fx::PROGRAM_ID);
+        assert_eq!(account.data.len(), fx::VAULT_SIZE);
         assert!(account.lamports >= env.rent(fx::VAULT_SIZE));
         assert!(account.lamports >= prefund);
-        assert_eq!(env.vault_state().version, 1);
+        assert_eq!(env.vault_state(), expected_vault(&env, &args));
     }
 }
 
@@ -168,7 +193,7 @@ fn a_program_data_lookalike_not_owned_by_loader_v3_is_refused() {
     let args = env.initialize_args();
     let result = env.send_initialize(&accounts, &args, &[]);
     let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
-    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+    fx::expect_account_error(result, fx::INITIALIZE_INDEX, code, "program_data");
 }
 
 #[test]
@@ -179,7 +204,7 @@ fn the_program_account_is_not_accepted_as_program_data() {
     let args = env.initialize_args();
     let result = env.send_initialize(&accounts, &args, &[]);
     let code = fx::anchor_code::NOT_PROGRAM_DATA;
-    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+    fx::expect_account_error(result, fx::INITIALIZE_INDEX, code, "program_data");
 }
 
 #[test]
@@ -211,7 +236,7 @@ fn a_token_2022_mint_is_refused() {
     let ix = fx::initialize_ix(&accounts, &env.initialize_args());
     let result = env.send(&[ix], &[]);
     let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
-    fx::expect_code(result, 0, code);
+    fx::expect_account_error(result, 0, code, "mint");
 }
 
 #[test]
@@ -222,7 +247,7 @@ fn a_token_program_other_than_classic_token_is_refused() {
     let args = env.initialize_args();
     let result = env.send_initialize(&accounts, &args, &[]);
     let code = fx::anchor_code::INVALID_PROGRAM_ID;
-    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+    fx::expect_account_error(result, fx::INITIALIZE_INDEX, code, "token_program");
 }
 
 #[test]
@@ -260,7 +285,7 @@ fn a_vault_token_account_not_owned_by_the_vault_is_rejected() {
     let args = env.initialize_args();
     let result = env.send_initialize(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_TOKEN_OWNER;
-    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+    fx::expect_account_error(result, fx::INITIALIZE_INDEX, code, "vault_token_account");
 }
 
 #[test]
@@ -276,7 +301,137 @@ fn a_non_canonical_vault_token_account_is_rejected() {
     let args = env.initialize_args();
     let result = env.send_initialize(&accounts, &args, &[]);
     let code = fx::anchor_code::CONSTRAINT_ASSOCIATED;
-    fx::expect_code(result, fx::INITIALIZE_INDEX, code);
+    fx::expect_account_error(result, fx::INITIALIZE_INDEX, code, "vault_token_account");
+}
+
+#[test]
+fn a_token_2022_vault_token_account_is_refused() {
+    // A Token-2022 account at the canonical vault ATA address fails the
+    // classic-Token owner check in S1. Sent without the ATA instruction,
+    // which would itself refuse the foreign owner first.
+    let mut env = fx::Env::deployed();
+    let state = fx::TokenAccountState::initialized(env.mint, env.vault, 0);
+    let vault_ata = env.vault_token_account;
+    fx::put_account(
+        &mut env.svm,
+        vault_ata,
+        fx::TOKEN_2022_PROGRAM_ID,
+        state.pack(),
+    );
+    let ix = fx::initialize_ix(&env.initialize_accounts(), &env.initialize_args());
+    let result = env.send(&[ix], &[]);
+    let code = fx::anchor_code::OWNED_BY_WRONG_PROGRAM;
+    fx::expect_account_error(result, 0, code, "vault_token_account");
+}
+
+#[test]
+fn a_non_canonical_vault_address_is_rejected() {
+    // S2: the `init` seeds check refuses a vault that is not the PDA
+    // `["vault", mint]` (2006), before any handler check.
+    let mut env = fx::Env::deployed();
+    let not_the_pda = fx::random_address();
+    let mut accounts = env.initialize_accounts();
+    accounts.vault = not_the_pda;
+    accounts.vault_token_account = fx::associated_token_address(&not_the_pda, &env.mint);
+    let args = env.initialize_args();
+    let result = env.send_initialize(&accounts, &args, &[]);
+    let code = fx::anchor_code::CONSTRAINT_SEEDS;
+    fx::expect_account_error(result, fx::INITIALIZE_INDEX, code, "vault");
+}
+
+#[test]
+fn the_upgrade_authority_and_the_payer_must_sign() {
+    let mut env = fx::Env::deployed();
+    let (vault, mint) = (env.vault, env.mint);
+    env.create_ata_for(&vault, &mint);
+    let args = env.initialize_args();
+
+    let accounts = env.initialize_accounts();
+    let mut ix = fx::initialize_ix(&accounts, &args);
+    ix.accounts[4].is_signer = false;
+    let result = env.send(&[ix], &[]);
+    let code = fx::anchor_code::NOT_SIGNER;
+    fx::expect_account_error(result, 0, code, "upgrade_authority");
+
+    // A payer account other than the fee payer, writable but not signing.
+    let mut accounts = env.initialize_accounts();
+    accounts.payer = fx::random_address();
+    let mut ix = fx::initialize_ix(&accounts, &args);
+    ix.accounts[5].is_signer = false;
+    let result = env.send(&[ix], &[]);
+    fx::expect_account_error(result, 0, code, "payer");
+}
+
+#[test]
+fn i1_to_i7_run_in_contract_order() {
+    // Each case breaks two adjacent checks at once; the earlier one is the
+    // error, so the code is deterministic for a given state (§3.3.0 S5).
+    let mut env = fx::Env::deployed();
+    let stranger = Keypair::new();
+
+    // I1 before I2: a foreign ProgramData that also names another authority.
+    let foreign = fx::random_address();
+    let header = fx::program_data_metadata(0, Some(stranger.pubkey())).to_vec();
+    fx::put_account(&mut env.svm, foreign, fx::LOADER_V3_ID, header);
+    let mut accounts = env.initialize_accounts();
+    accounts.program_data = foreign;
+    accounts.upgrade_authority = stranger.pubkey();
+    let args = env.initialize_args();
+    let result = env.send_initialize(&accounts, &args, &[&stranger]);
+    fx::expect_init_error(result, fx::code::INVALID_PROGRAM_DATA);
+
+    // I2 before I3: a stranger signs for a 9-decimal mint.
+    let mint9 = env.new_mint(9);
+    let vault9 = fx::vault_pda(&mint9).0;
+    let vault9_ata = fx::associated_token_address(&vault9, &mint9);
+    let mut accounts = env.initialize_accounts();
+    accounts.vault = vault9;
+    accounts.mint = mint9;
+    accounts.vault_token_account = vault9_ata;
+    let mut by_stranger = accounts;
+    by_stranger.upgrade_authority = stranger.pubkey();
+    let result = env.send_initialize(&by_stranger, &args, &[&stranger]);
+    fx::expect_init_error(result, fx::code::NOT_UPGRADE_AUTHORITY);
+
+    // I3 before I4: the 9-decimal mint, and its vault ATA has a delegate.
+    let mut delegated = fx::TokenAccountState::initialized(mint9, vault9, 0);
+    delegated.delegate = Some(fx::random_address());
+    env.put_token_account(vault9_ata, &delegated);
+    let result = env.send_initialize(&accounts, &args, &[]);
+    fx::expect_init_error(result, fx::code::INVALID_MINT);
+
+    // I4 before I5: the vault ATA has a delegate and the admin is default.
+    let mut delegated = fx::TokenAccountState::initialized(env.mint, env.vault, 0);
+    delegated.delegate = Some(fx::random_address());
+    let vault_ata = env.vault_token_account;
+    env.put_token_account(vault_ata, &delegated);
+    let accounts = env.initialize_accounts();
+    let mut bad = env.initialize_args();
+    bad.admin = Address::default();
+    let result = env.send_initialize(&accounts, &bad, &[]);
+    fx::expect_init_error(result, fx::code::INVALID_VAULT_TOKEN_ACCOUNT);
+    let clean = fx::TokenAccountState::initialized(env.mint, env.vault, 0);
+    env.put_token_account(vault_ata, &clean);
+
+    // I5 before I6: the admin is default and the claim authority is the
+    // guardian.
+    let mut bad = env.initialize_args();
+    bad.admin = Address::default();
+    bad.claim_authority = bad.guardian;
+    let result = env.send_initialize(&accounts, &bad, &[]);
+    fx::expect_init_error(result, fx::code::INVALID_ROLE);
+
+    // I6 before I7: the claim authority is the admin and both caps are 0.
+    let mut bad = env.initialize_args();
+    bad.claim_authority = bad.admin;
+    bad.max_per_claim = 0;
+    bad.max_per_day = 0;
+    let result = env.send_initialize(&accounts, &bad, &[]);
+    fx::expect_init_error(result, fx::code::ROLE_CONFLICT);
+
+    // Nothing was created along the way; the clean call still works.
+    fx::expect_ok(env.send_initialize(&accounts, &args, &[]));
+    assert_eq!(env.vault_state(), expected_vault(&env, &args));
 }
 
 #[test]

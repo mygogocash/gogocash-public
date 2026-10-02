@@ -32,6 +32,18 @@ regex = '''(?i)\b[a-z0-9_]*(?:secret[_-]?key|private[_-]?key|keypair)\b["']?\s*[
 secretGroup = 1
 keywords = ["secret", "private", "keypair"]
 
+[[rules]]
+id = "solana-secret-key-base58-token-account"
+description = "Base58 64-byte Solana secret key assigned to a *token_account name"
+# The allowlist below lets 32-44 character public addresses through under
+# *token_account names. A secret key under such a name (86-89 characters) is
+# caught here, by its own rule, instead of relying on the upstream
+# generic-api-key rule: that rule skips any value that happens to contain one
+# of its stopwords, which a random base58 string does about 2% of the time.
+regex = '''(?i)\b[a-z0-9_]*token_account\b["']?\s*[:=]\s*["']?([1-9A-HJ-NP-Za-km-z]{86,89})\b'''
+secretGroup = 1
+keywords = ["token_account"]
+
 [[allowlists]]
 description = "Public Solana token-account addresses (docs/CONTRACT.md, fixtures)"
 # generic-api-key matches the word "token" in names like

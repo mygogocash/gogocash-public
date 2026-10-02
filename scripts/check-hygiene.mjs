@@ -129,8 +129,16 @@ function checkKeyMaterialIsCaught() {
       )}`,
     );
   }
+  // Asserted by rule ID: the upstream generic-api-key rule also matches this
+  // line, but it skips values that contain one of its stopwords, so relying
+  // on it made this check fail at random (about 2% of runs).
   assert.ok(
-    report.some((f) => f.File === "leaked-account.json" && f.Secret === "REDACTED"),
+    report.some(
+      (f) =>
+        f.File === "leaked-account.json" &&
+        f.RuleID === "solana-secret-key-base58-token-account" &&
+        f.Secret === "REDACTED",
+    ),
     `a 64-byte base58 value under a *token_account key must still be reported; got ${JSON.stringify(
       report.map((f) => [f.File, f.RuleID]),
     )}`,

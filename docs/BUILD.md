@@ -44,7 +44,7 @@ single required status. It fails unless every job below succeeded.
 | `lockfiles` | `Cargo.lock` and `tests-litesvm/Cargo.lock` resolve. If either is committed, it is current (`--locked`). Both are uploaded as the `cargo-lockfiles` artifact, and every other job uses exactly those. |
 | `fmt-clippy` | `cargo fmt --check` passes in both workspaces, and `cargo clippy --all-targets -- -D warnings` passes for the program. `cargo check --features mainnet` must fail with the contract's `compile_error!` (contract v0 has no mainnet program id, §2.4). |
 | `build` | `anchor build --ignore-keys --arch v3` succeeds without changing `Cargo.lock`. `scripts/check-sbpf.mjs` shows that `target/deploy/gogocash_cashback.so` is SBPFv3, and the security.txt marker is in the binary. The IDL has exactly the 8 contract instructions with their §3.3 discriminators, plus `Vault`, `Receipt` and `PayoutClaimed`, and equals the committed `idl/gogocash_cashback.devnet.json`. Uploads the `.so` and the IDL as artifacts. |
-| `litesvm` | `cargo test --no-fail-fast` in `tests-litesvm/` against the `.so` that `build` uploaded: the artifact checks, every instruction's handler checks in contract order with their exact error codes and messages, the Anchor account checks, the contract's decode vectors, and the compute-unit budget (`claim` at most 45,000 CU). The suite writes `cu-report.json` (compute units per instruction, tied to the `.so` by its sha256), which the job prints in the run summary and uploads as the `cu-report` artifact. Clippy also runs for this workspace. |
+| `litesvm` | `cargo test --no-fail-fast` in `tests-litesvm/` against the `.so` that `build` uploaded: the artifact checks, every instruction's handler checks in contract order with their exact error codes and messages, the Anchor account checks, the contract's decode vectors, and the compute-unit budget (`claim` at most 45,000 CU). The suite writes `cu-report.json` (compute units per instruction, tied to the `.so` by its sha256), which the job prints in the run summary and uploads as the `cu-report` artifact. After the suite, the job re-checks the tested `.so` against the sha256 it recorded on download, and the report's `so_sha256` against it. Clippy also runs for this workspace. |
 | `trivy` | No HIGH or CRITICAL advisory in `Cargo.lock` or `tests-litesvm/Cargo.lock`. |
 | `crate-age` | Every crates.io package in both lockfiles was published at least 7 days ago (the org's release-age hold), using the `pubtime` field of the crates.io sparse index. `scripts/check-crate-age.mjs` treats an unknown publish time as too new. |
 
@@ -62,9 +62,10 @@ values.
 
 `anchor build` writes `target/idl/gogocash_cashback.json`. The committed copy
 is `idl/gogocash_cashback.devnet.json`, the per-cluster name contract v0 §2.4
-gives it (v0 builds devnet only). Any IDL change, including a doc comment on
-an instruction, an account or a field, fails CI until you update the committed
-copy in the same pull request from the `gogocash_cashback-idl` artifact.
+gives it (v0 builds devnet only). A missing committed copy fails CI, and so
+does any IDL change, including a doc comment on an instruction, an account or
+a field, until you update the committed copy in the same pull request from
+the `gogocash_cashback-idl` artifact.
 
 ### Why Trivy skips `package-lock.json`
 
@@ -107,9 +108,12 @@ Runs on `v*` tags and on manual dispatch (no inputs). It:
    `solana-verify get-executable-hash` value as the
    `gogocash_cashback-verifiable` artifact;
 5. in a second job on a fresh runner, downloads that artifact, checks it has
-   the sha256 the build job recorded, and runs the LiteSVM suite against it.
+   the sha256 the build job recorded, runs the LiteSVM suite against it,
+   re-checks the sha256 afterwards, and uploads the suite's compute-unit
+   report as the `cu-report-verifiable` artifact.
 
-Steps 1 to 4 run no host-side third-party Rust code. The LiteSVM suite
+Steps 1 to 4 run no crate build scripts or proc-macros on the host (the only
+host-side tool is the checksummed `solana-verify` binary). The LiteSVM suite
 compiles and runs build scripts from several hundred crates, which is why it
 runs on a separate runner and only ever sees a copy of the published bytes.
 Treat a release artifact as good only when the whole run is green.
