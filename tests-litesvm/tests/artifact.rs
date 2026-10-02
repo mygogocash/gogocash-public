@@ -59,6 +59,22 @@ fn every_v0_instruction_is_dispatched() {
 }
 
 #[test]
+fn the_binary_refuses_to_run_under_another_program_id() {
+    // §3.6 4100: a binary deployed at an address other than its declare_id!
+    // (for example built with the wrong cargo feature) dispatches nothing.
+    let mut env = fx::Env::deployed();
+    let other = fx::random_address();
+    if let Err(err) = env.svm.add_program(other, fx::program_bytes()) {
+        panic!("LiteSVM refused the program at {other}: {err}");
+    }
+    let mut ix = fx::raw_ix(fx::instruction_discriminator("pause").to_vec());
+    ix.program_id = other;
+    let result = env.send(&[ix], &[]);
+    let code = fx::anchor_code::DECLARED_PROGRAM_ID_MISMATCH;
+    fx::expect_code(result, 0, code);
+}
+
+#[test]
 fn unknown_discriminator_is_rejected() {
     let mut env = fx::Env::deployed();
     let result = env.send(&[fx::raw_ix(vec![0; 8])], &[]);

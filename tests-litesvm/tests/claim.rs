@@ -241,6 +241,22 @@ fn the_claim_authority_must_sign() {
 }
 
 #[test]
+fn the_vault_must_be_writable() {
+    let mut env = fx::Env::live();
+    let payout_id = fx::random_payout_id();
+    let accounts = env.claim_accounts(&fx::random_address(), &payout_id);
+    let args = env.claim_args(payout_id, AMOUNT);
+    let mut claim = fx::claim_ix(&accounts, &args);
+    claim.accounts[0].is_writable = false;
+    let payer = env.payer.pubkey();
+    let ata = fx::create_ata_idempotent(&payer, &accounts.recipient, &accounts.mint);
+    let result = env.send(&[ata, claim], &[]);
+    let code = fx::anchor_code::CONSTRAINT_MUT;
+    fx::expect_code(result, fx::CLAIM_INDEX, code);
+    assert_eq!(env.vault_state().claim_count, 0);
+}
+
+#[test]
 fn handler_checks_run_in_contract_order() {
     let mut env = fx::Env::live_with_balance(1_000_000);
     let recipient = fx::random_address();
@@ -399,7 +415,12 @@ fn a_token_2022_recipient_token_account_is_refused() {
     let token_2022_account = fx::random_address();
     let state = fx::TokenAccountState::initialized(env.mint, recipient, 0);
     let data = state.pack();
-    fx::put_account(&mut env.svm, token_2022_account, fx::TOKEN_2022_PROGRAM_ID, data);
+    fx::put_account(
+        &mut env.svm,
+        token_2022_account,
+        fx::TOKEN_2022_PROGRAM_ID,
+        data,
+    );
     let payout_id = fx::random_payout_id();
     let mut accounts = env.claim_accounts(&recipient, &payout_id);
     accounts.recipient_token_account = token_2022_account;

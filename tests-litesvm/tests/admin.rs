@@ -37,6 +37,25 @@ fn p1_nobody_else_can_pause() {
 }
 
 #[test]
+fn a_receipt_is_not_accepted_as_a_vault() {
+    // Type confusion: the program owns both account types, so the
+    // discriminator check (S1, 3002) is what tells them apart.
+    let mut env = fx::Env::live();
+    let (payout_id, result) = env.claim(&fx::random_address(), 1_000_000);
+    fx::expect_ok(result);
+    let receipt = fx::receipt_pda(&env.vault, &payout_id).0;
+    let guardian = env.guardian.pubkey();
+    let result = env.send(&[fx::pause_ix(&receipt, &guardian)], &[]);
+    let code = fx::anchor_code::ACCOUNT_DISCRIMINATOR_MISMATCH;
+    fx::expect_code(result, 0, code);
+    let admin = env.admin.pubkey();
+    let update = env.update_config_args();
+    let ix = fx::update_config_ix(&receipt, &admin, &update);
+    fx::expect_code(env.send(&[ix], &[]), 0, code);
+    assert!(env.receipt_state(&payout_id).is_some());
+}
+
+#[test]
 fn u1_the_guardian_cannot_unpause_and_the_admin_can() {
     let mut env = fx::Env::initialized();
     let vault = env.vault;

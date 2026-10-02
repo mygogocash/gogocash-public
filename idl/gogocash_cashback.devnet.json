@@ -1,0 +1,1106 @@
+{
+  "address": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+  "metadata": {
+    "name": "gogocash_cashback",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "GoGoCash cashback program: pays approved USDC payouts exactly once (contract v0)"
+  },
+  "docs": [
+    "The eight v0 instructions, declared in contract order (CONTRACT.md 3.3)."
+  ],
+  "instructions": [
+    {
+      "name": "accept_admin",
+      "docs": [
+        "Completes the admin handover. Pending admin only."
+      ],
+      "discriminator": [
+        112,
+        42,
+        45,
+        90,
+        116,
+        181,
+        13,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault whose admin is being handed over."
+          ],
+          "writable": true
+        },
+        {
+          "name": "new_admin",
+          "docs": [
+            "Must be the pending admin (B1)."
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim",
+      "docs": [
+        "Pays one approved payout exactly once and writes its receipt."
+      ],
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault paying out, PDA `[\"vault\", mint]`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "receipt",
+          "docs": [
+            "The new receipt, PDA `[\"receipt\", vault, payout_id]` with the",
+            "canonical bump. Its rent is paid by `payer` and never reclaimed."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  99,
+                  101,
+                  105,
+                  112,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "arg",
+                "path": "payout_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The vault mint (classic SPL Token); checked in C3."
+          ]
+        },
+        {
+          "name": "vault_token_account",
+          "docs": [
+            "The vault's token account; checked in C4."
+          ],
+          "writable": true
+        },
+        {
+          "name": "recipient",
+          "docs": [
+            "The wallet being paid. Must be system-owned; a never-funded wallet",
+            "passes. Checked in C5."
+          ]
+        },
+        {
+          "name": "recipient_token_account",
+          "docs": [
+            "The canonical ATA of (recipient, mint, classic Token). Must exist."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "recipient"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "claim_authority",
+          "docs": [
+            "Must equal `vault.claim_authority` (C2)."
+          ],
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Any key (not pinned in v0); funds the receipt rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Classic SPL Token."
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System program, used by `init`."
+          ],
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "payout_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "expires_at",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Creates the vault for one mint, paused. Upgrade authority only."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The new vault, PDA `[\"vault\", mint]` with the canonical bump."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The USDC mint (classic SPL Token)."
+          ]
+        },
+        {
+          "name": "vault_token_account",
+          "docs": [
+            "The canonical ATA of (vault, mint, classic Token). Must already exist."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "vault"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "program_data",
+          "docs": [
+            "This program's ProgramData account; its address is checked in I1."
+          ]
+        },
+        {
+          "name": "upgrade_authority",
+          "docs": [
+            "Must be the program's upgrade authority (I2)."
+          ],
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Pays the vault rent."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Classic SPL Token."
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System program, used by `init`."
+          ],
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "admin",
+          "type": "pubkey"
+        },
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        },
+        {
+          "name": "claim_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_per_claim",
+          "type": "u64"
+        },
+        {
+          "name": "max_per_day",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "pause",
+      "docs": [
+        "Blocks `claim`. Admin or guardian; idempotent."
+      ],
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault to pause."
+          ],
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "docs": [
+            "The admin or the guardian (P1)."
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "propose_admin",
+      "docs": [
+        "Proposes a new admin; the default key cancels. Admin only."
+      ],
+      "discriminator": [
+        121,
+        214,
+        199,
+        212,
+        87,
+        39,
+        117,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault whose admin is being handed over."
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must be the vault admin (A1)."
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "unpause",
+      "docs": [
+        "Re-enables `claim`. Admin only; idempotent."
+      ],
+      "discriminator": [
+        169,
+        144,
+        4,
+        38,
+        10,
+        141,
+        188,
+        255
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault to unpause."
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must be the vault admin (U1)."
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_config",
+      "docs": [
+        "Replaces the guardian, the claim authority and both caps. Admin only."
+      ],
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault to reconfigure."
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must be the vault admin (G1)."
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "guardian",
+          "type": "pubkey"
+        },
+        {
+          "name": "claim_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "max_per_claim",
+          "type": "u64"
+        },
+        {
+          "name": "max_per_day",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "docs": [
+        "Moves float out of the vault to an admin-owned token account."
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "The vault paying out, PDA `[\"vault\", mint]`."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Must be the vault admin (W1)."
+          ],
+          "signer": true
+        },
+        {
+          "name": "mint",
+          "docs": [
+            "The vault mint (classic SPL Token); checked in W2."
+          ]
+        },
+        {
+          "name": "vault_token_account",
+          "docs": [
+            "The vault's token account; checked in W3."
+          ],
+          "writable": true
+        },
+        {
+          "name": "destination",
+          "docs": [
+            "An admin-owned token account of the vault mint; checked in W5.",
+            "Passing the vault token account here fails Anchor's duplicate check."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Classic SPL Token."
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Receipt",
+      "discriminator": [
+        39,
+        154,
+        73,
+        106,
+        80,
+        102,
+        145,
+        153
+      ]
+    },
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "PayoutClaimed",
+      "discriminator": [
+        200,
+        39,
+        105,
+        112,
+        116,
+        63,
+        58,
+        149
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Paused",
+      "msg": "Vault is paused"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidClaimAuthority",
+      "msg": "Signer is not the vault claim authority"
+    },
+    {
+      "code": 6002,
+      "name": "NotAdmin",
+      "msg": "Signer is not the vault admin"
+    },
+    {
+      "code": 6003,
+      "name": "NotAdminOrGuardian",
+      "msg": "Signer is neither the vault admin nor the guardian"
+    },
+    {
+      "code": 6004,
+      "name": "NotPendingAdmin",
+      "msg": "Signer is not the pending admin"
+    },
+    {
+      "code": 6005,
+      "name": "NotUpgradeAuthority",
+      "msg": "Signer is not the program upgrade authority"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidProgramData",
+      "msg": "Account is not this program's ProgramData account"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidRole",
+      "msg": "Role must not be the default public key"
+    },
+    {
+      "code": 6008,
+      "name": "ZeroPayoutId",
+      "msg": "Payout id must not be all zero bytes"
+    },
+    {
+      "code": 6009,
+      "name": "ZeroAmount",
+      "msg": "Amount must be greater than zero"
+    },
+    {
+      "code": 6010,
+      "name": "ExceedsMaxPerClaim",
+      "msg": "Amount exceeds the per-claim cap"
+    },
+    {
+      "code": 6011,
+      "name": "DayCapExceeded",
+      "msg": "Claim would exceed the daily cap"
+    },
+    {
+      "code": 6012,
+      "name": "Expired",
+      "msg": "Claim has expired"
+    },
+    {
+      "code": 6013,
+      "name": "ExpiryTooFar",
+      "msg": "Claim expiry is more than 900 seconds ahead"
+    },
+    {
+      "code": 6014,
+      "name": "VaultTokenAccountFrozen",
+      "msg": "Vault token account is frozen"
+    },
+    {
+      "code": 6015,
+      "name": "RecipientTokenAccountFrozen",
+      "msg": "Recipient token account is frozen"
+    },
+    {
+      "code": 6016,
+      "name": "InsufficientVaultBalance",
+      "msg": "Vault balance is below the amount"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidRecipient",
+      "msg": "Recipient must not be the vault, the claim authority or the payer"
+    },
+    {
+      "code": 6018,
+      "name": "InvalidVaultTokenAccount",
+      "msg": "Vault token account is not canonical or has a delegate or close authority"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidMint",
+      "msg": "Mint is not the vault mint or does not have 6 decimals"
+    },
+    {
+      "code": 6020,
+      "name": "RoleConflict",
+      "msg": "Claim authority must not also be the admin or the guardian"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidCaps",
+      "msg": "Caps must be non-zero and max_per_claim must not exceed max_per_day"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidWithdrawDestination",
+      "msg": "Withdraw destination must be an unfrozen vault-mint token account owned by the admin"
+    },
+    {
+      "code": 6023,
+      "name": "MathOverflow",
+      "msg": "Arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "PayoutClaimed",
+      "docs": [
+        "Emitted by `claim` after the transfer."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "Vault the payout came from."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "receipt",
+            "docs": [
+              "Receipt created for this payout."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "payout_id",
+            "docs": [
+              "The payout id the receipt is derived from."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "recipient",
+            "docs": [
+              "Wallet that received the USDC."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Atomic USDC transferred."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claimed_at",
+            "docs": [
+              "`now` at execution."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "day",
+            "docs": [
+              "`current_day` after the claim."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "claimed_today",
+            "docs": [
+              "`claimed_today` after the claim."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claim_count",
+            "docs": [
+              "`claim_count` after the claim."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed",
+            "docs": [
+              "`total_claimed` after the claim."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Receipt",
+      "docs": [
+        "Proof that one payout was paid: PDA `[\"receipt\", vault, payout_id]`,",
+        "89 bytes, permanent (there is no close instruction).",
+        "",
+        "Field order is the Borsh order and therefore the byte layout of",
+        "CONTRACT.md 3.2; do not reorder."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "docs": [
+              "Canonical bump of `[\"receipt\", vault, payout_id]`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "payout_id",
+            "docs": [
+              "The 32 random bytes issued by the API at challenge time."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "recipient",
+            "docs": [
+              "Wallet (system account) that received the USDC."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Atomic USDC transferred."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claimed_at",
+            "docs": [
+              "`now` at execution."
+            ],
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "docs": [
+        "One vault per mint: PDA `[\"vault\", mint]`, 324 bytes.",
+        "",
+        "Field order is the Borsh order and therefore the byte layout of",
+        "CONTRACT.md 3.2; do not reorder."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "docs": [
+              "Layout version. `1` in v0."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "Canonical bump of `[\"vault\", mint]`."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "`true` blocks `claim` only."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "decimals",
+            "docs": [
+              "Mint decimals copied at `initialize`; always 6."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "mint",
+            "docs": [
+              "Configured USDC mint."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_token_account",
+            "docs": [
+              "Canonical associated token account of (vault, mint, classic Token)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "docs": [
+              "Admin (later the Squads vault)."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "pending_admin",
+            "docs": [
+              "Proposed admin; the default key means none."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "guardian",
+            "docs": [
+              "May pause only."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "claim_authority",
+            "docs": [
+              "Worker hot key that co-signs `claim`."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "max_per_claim",
+            "docs": [
+              "Atomic USDC cap per claim."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_per_day",
+            "docs": [
+              "Atomic USDC cap per UTC day."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "current_day",
+            "docs": [
+              "`day(now)` of the bucket `claimed_today` counts."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "claimed_today",
+            "docs": [
+              "Atomic USDC claimed in `current_day`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_claimed",
+            "docs": [
+              "Lifetime atomic USDC claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claim_count",
+            "docs": [
+              "Lifetime number of successful claims (equals receipts created)."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_withdrawn",
+            "docs": [
+              "Lifetime atomic USDC moved out by `withdraw`."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "reserved",
+            "docs": [
+              "Zero at `initialize`. Not interpreted in v0."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

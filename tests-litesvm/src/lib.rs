@@ -470,10 +470,12 @@ pub mod anchor_code {
     pub const INSTRUCTION_MISSING: u32 = 100;
     pub const FALLBACK_NOT_FOUND: u32 = 101;
     pub const DID_NOT_DESERIALIZE: u32 = 102;
+    pub const CONSTRAINT_MUT: u32 = 2000;
     pub const CONSTRAINT_SEEDS: u32 = 2006;
     pub const CONSTRAINT_ASSOCIATED: u32 = 2009;
     pub const CONSTRAINT_TOKEN_OWNER: u32 = 2015;
     pub const DUPLICATE_MUTABLE_ACCOUNT: u32 = 2040;
+    pub const ACCOUNT_DISCRIMINATOR_MISMATCH: u32 = 3002;
     pub const NOT_ENOUGH_KEYS: u32 = 3005;
     pub const OWNED_BY_WRONG_PROGRAM: u32 = 3007;
     pub const INVALID_PROGRAM_ID: u32 = 3008;
@@ -481,6 +483,7 @@ pub mod anchor_code {
     pub const NOT_SYSTEM_OWNED: u32 = 3011;
     pub const NOT_INITIALIZED: u32 = 3012;
     pub const NOT_PROGRAM_DATA: u32 = 3013;
+    pub const DECLARED_PROGRAM_ID_MISMATCH: u32 = 4100;
 }
 
 /// System program `AccountAlreadyInUse` (`Custom(0)`, §3.7).
