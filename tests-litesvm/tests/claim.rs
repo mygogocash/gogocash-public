@@ -728,8 +728,14 @@ fn counter_overflow_in_the_effects_is_math_overflow() {
 
 #[test]
 fn compute_units_are_reported_and_claim_fits_the_budget() {
+    // Every input that feeds a PDA or ATA bump search is fixed (the devnet
+    // mint, the contract's payout id vector, seeded recipients), so the
+    // report is the same on every run for the same binary. `init` searches
+    // for the canonical receipt bump, so the cost of `claim` also depends on
+    // the payout id: the worst of 32 random payout ids is recorded and held
+    // to the same budget.
     let mut report = fx::CuReport::default();
-    let mut env = fx::Env::deployed();
+    let mut env = fx::Env::deployed_with_mint(fx::vectors::DEVNET_MINT);
     let payer = env.payer.pubkey();
     let admin = env.admin.pubkey();
     let vault = env.vault;
@@ -743,9 +749,9 @@ fn compute_units_are_reported_and_claim_fits_the_budget() {
     report.record("unpause", fx::compute_units(env.send(&[ix], &[])));
 
     // `claim` alone, with the recipient ATA already present.
-    let recipient = fx::random_address();
+    let recipient = fx::vectors::TEST_KEY_1;
     env.create_ata(&recipient);
-    let payout_id = fx::random_payout_id();
+    let payout_id = fx::vectors::payout_id();
     let accounts = env.claim_accounts(&recipient, &payout_id);
     let args = env.claim_args(payout_id, AMOUNT);
     let claim_units = fx::compute_units(env.send_claim_only(&accounts, &args, &[]));
@@ -753,16 +759,27 @@ fn compute_units_are_reported_and_claim_fits_the_budget() {
 
     // The rail's transaction without compute-budget instructions (O15):
     // recipient ATA present, then recipient ATA created in the transaction.
-    let payout_id = fx::random_payout_id();
+    let payout_id = fx::seeded_bytes("gogocash cu-report payout 2");
     let accounts = env.claim_accounts(&recipient, &payout_id);
     let args = env.claim_args(payout_id, AMOUNT);
     let units = fx::compute_units(env.send_claim(&accounts, &args, &[]));
     report.record("tx_claim_ata_present", units);
-    let payout_id = fx::random_payout_id();
-    let accounts = env.claim_accounts(&fx::random_address(), &payout_id);
+    let payout_id = fx::seeded_bytes("gogocash cu-report payout 3");
+    let new_recipient = fx::seeded_address("gogocash cu-report recipient 3");
+    let accounts = env.claim_accounts(&new_recipient, &payout_id);
     let args = env.claim_args(payout_id, AMOUNT);
     let units = fx::compute_units(env.send_claim(&accounts, &args, &[]));
     report.record("tx_claim_ata_created", units);
+
+    let mut claim_max = 0;
+    for _ in 0..32 {
+        let payout_id = fx::random_payout_id();
+        let accounts = env.claim_accounts(&recipient, &payout_id);
+        let args = env.claim_args(payout_id, 1);
+        let units = fx::compute_units(env.send_claim_only(&accounts, &args, &[]));
+        claim_max = claim_max.max(units);
+    }
+    report.record("claim_max_of_32_random_payout_ids", claim_max);
 
     let ix = fx::pause_ix(&vault, &admin);
     report.record("pause", fx::compute_units(env.send(&[ix], &[])));
@@ -789,4 +806,5 @@ fn compute_units_are_reported_and_claim_fits_the_budget() {
     println!("{}", report.to_json(&so_sha256));
     let budget = fx::CLAIM_CU_BUDGET;
     assert!(claim_units <= budget, "claim used {claim_units} CU");
+    assert!(claim_max <= budget, "a claim used {claim_max} CU");
 }

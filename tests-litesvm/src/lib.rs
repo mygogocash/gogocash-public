@@ -152,6 +152,22 @@ pub fn random_payout_id() -> [u8; 32] {
     random_address().to_bytes()
 }
 
+/// `sha256(label)`: 32 fixed bytes, used where a measurement must not depend
+/// on randomness (a payout id or address fixes the PDA and ATA bump searches,
+/// and so the compute units).
+pub fn seeded_bytes(label: &str) -> [u8; 32] {
+    let digest = Sha256::digest(label.as_bytes());
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&digest);
+    out
+}
+
+/// A fixed address derived from `label` (see [`seeded_bytes`]). Nobody holds
+/// a key for it; it serves as a never-funded recipient wallet.
+pub fn seeded_address(label: &str) -> Address {
+    Address::new_from_array(seeded_bytes(label))
+}
+
 // ---------------------------------------------------------------------------
 // Discriminators (contract §3.1, §3.2, §3.3, §3.4)
 // ---------------------------------------------------------------------------

@@ -42,13 +42,17 @@ compile_error!("contract v0 has no mainnet program id (CONTRACT.md 2.4)");
 // deployment.
 declare_id!("HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje");
 
+// The status the ticket requires in security.txt (#2980): unaudited, devnet
+// only, the source repository and a contact.
 #[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
-    name: "gogocash_cashback",
+    name: "gogocash_cashback (devnet only, contract v0)",
     project_url: "https://github.com/mygogocash/gogocash-public",
     contacts: "email:support@gogocash.co",
     policy: "https://github.com/mygogocash/gogocash-public/blob/main/SECURITY.md",
-    source_code: "https://github.com/mygogocash/gogocash-public"
+    preferred_languages: "en",
+    source_code: "https://github.com/mygogocash/gogocash-public",
+    auditors: "None: unaudited, devnet only. Do not use it to hold real funds."
 }
 
 /// The eight v0 instructions, declared in contract order (CONTRACT.md 3.3).
