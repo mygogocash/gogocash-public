@@ -72,8 +72,18 @@ jobs:
           node-version: "26.5.1"
       # --ignore-scripts: no dependency lifecycle script runs in CI.
       - run: npm ci --ignore-scripts --no-audit --no-fund
+      # @solana/web3.js v1 pulls in bigint-buffer (CVE-2025-3194, no fix).
+      # Neither may come back, directly or transitively.
+      - name: No @solana/web3.js or bigint-buffer in the dependency tree
+        run: |
+          set -euo pipefail
+          npm query '[name=bigint-buffer], [name="@solana/web3.js"]' | jq -e 'length == 0'
       - run: npm run typecheck
       - run: npm test
+      # Consumers load this package as TypeScript source. Node's type
+      # stripping must load the public API with no flags and no build step.
+      - name: Source loads with Node type stripping (no flags)
+        run: node -e "import('./src/index.ts')"
 
   ci:
     name: ci

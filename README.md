@@ -36,61 +36,63 @@ Solana is the payout rail:
 
 - **USDC on Solana** is the payout currency: a stable, dollar-denominated amount with a sub-cent network fee, settled in seconds.
 - **Solana Mobile Wallet Adapter** connects the member's wallet on a Seeker or Saga phone. The app only learns the receiving address. Keys stay in the member's wallet.
-- **Onchain proof before "paid":** the ledger marks a payout paid only after reading the confirmed transaction. It must show exactly the approved USDC amount, sent from the treasury to the member, with the payout id attached as a memo.
+- **Onchain proof before "paid":** the ledger marks a payout paid only after a finalized onchain receipt for that payout id shows exactly the approved recipient and USDC amount ([docs/CONTRACT.md](docs/CONTRACT.md) section 3.8).
 
 ## How the payout works
 
+The rail is specified in [docs/CONTRACT.md](docs/CONTRACT.md) (contract v0). The member signs a message, never a transaction; an Anchor program pays each payout id at most once and leaves a receipt account behind.
+
 ```
 approved cashback (THB, integer satang)
-   │  src/amount.ts        exact bigint FX conversion, rounds down, no floats
+   │  src/amount.ts          exact bigint THB → USDC conversion, u64 bound, no floats
    ▼
-USDC base units (6 decimals)
-   │  src/payout.ts        1. create member USDC account if needed (treasury pays)
-   │                       2. transferChecked exact amount, treasury → member
-   │                       3. memo "gogocash:cashback:<payoutId>"
+consent message (exact bytes)
+   │  src/siws.ts            render the SIWS message; the member signs it in their wallet;
+   │                         strict Ed25519 verify (small-order, non-canonical, S >= L checks)
    ▼
-signed + sent by the treasury
-   │  src/verify.ts        read the confirmed tx; require one transfer of the right
-   │                       mint, amount, source, signer, destination and memo
+claim on the gogocash_cashback program (Anchor program and claim builder in progress)
+   │  src/program.ts         vault and receipt PDAs, account decoders
+   │  src/errors.ts          classify program, Anchor and instruction errors by number
+   ▼
+finalized receipt account
+   │  src/verify-receipt.ts  deployment binding, owner, discriminator, bump and
+   │                         (payout id, recipient, amount) tuple must all match
    ▼
 ledger marks the payout paid
 ```
 
 | File | What it does |
 |---|---|
-| [`src/amount.ts`](src/amount.ts) | Integer-only conversion from cashback minor units to USDC base units |
-| [`src/payout.ts`](src/payout.ts) | Builds the payout transaction: token account, `transferChecked`, payout-id memo |
-| [`src/verify.ts`](src/verify.ts) | Checks the confirmed transaction before the payout is marked paid |
-| [`src/seeker-wallet.ts`](src/seeker-wallet.ts) | Connects the member's wallet on Solana Mobile via Mobile Wallet Adapter |
-| [`scripts/demo.ts`](scripts/demo.ts) | End-to-end devnet demo |
-| [`test/`](test) | Offline unit tests, including 10 ways a wrong payout is rejected |
+| [`src/amount.ts`](src/amount.ts) | Integer-only conversion from cashback minor units to USDC base units, decimal-string grammar, u64 bound |
+| [`src/clusters.ts`](src/clusters.ts) | Genesis hashes, chain ids, USDC mints and program ids per cluster |
+| [`src/base58.ts`](src/base58.ts) | Strict base58 validator for addresses and signatures |
+| [`src/siws.ts`](src/siws.ts) | Consent message renderer and strict Ed25519 signature verification |
+| [`src/program.ts`](src/program.ts) | Vault and receipt PDAs (program id always passed in) and account decoders |
+| [`src/errors.ts`](src/errors.ts) | Error classification: retry, hold, needs review, already claimed, bug, config |
+| [`src/verify-receipt.ts`](src/verify-receipt.ts) | Receipt verification before a payout is marked paid |
+| [`src/release.ts`](src/release.ts) | The five-condition proof that a stuck payout can never land |
+| [`examples/seeker-wallet.ts`](examples/seeker-wallet.ts) | Example of connecting the member's wallet with Mobile Wallet Adapter (not compiled) |
+| [`test/`](test) | Offline unit tests built from the contract's vectors |
 
-## Run the demo
+## Run the tests
 
-Requires Node.js 20 or newer.
+Requires Node.js 22.18 or newer (the source runs through Node's built-in TypeScript type stripping).
 
 ```bash
 git clone https://github.com/mygogocash/gogocash-public.git
 cd gogocash-public
 npm install
-npm test          # offline unit tests
-npm run demo      # live payout on Solana devnet
+npm test               # offline unit tests
+npm run typecheck
+node -e "import('./src/index.ts')"   # loads the SDK with no build step
 ```
 
-`npm run demo`:
-
-1. Creates throwaway devnet keypairs in `.demo/`, which is gitignored. One is a treasury; the other stands in for the member's Seeker wallet.
-2. Creates a 6-decimal demo USDC mint and stocks the treasury with it.
-3. Converts an approved cashback of THB 125.00 to USDC.
-4. Sends one payout transaction and prints its Solana Explorer link.
-5. Verifies the payout from the chain, then shows the same transaction being rejected when the expected amount is wrong.
-
-The public devnet faucet is rate limited. If the airdrop is refused, the demo prints the treasury address. Fund it at https://faucet.solana.com and run `npm run demo` again. To use a different RPC, set `SOLANA_RPC_URL`.
+The earlier end-to-end devnet demo (`npm run demo`) was removed with the old transfer-based payout code. It is being rebuilt on the program.
 
 ## Status and scope
 
-- **Devnet only.** The demo creates its own 6-decimal demo USDC mint, so it runs without waiting on a faucet. Circle also runs a devnet USDC faucet (https://faucet.circle.com) for its official devnet USDC mint. On mainnet, `usdcMint` is Circle's USDC mint and the treasury is a managed, funded wallet.
-- **What exists today:** the GoGoCash withdrawal system supports bank and PromptPay payouts. EVM stablecoin payouts are sent by an admin: before settlement the system checks that the attached transaction succeeded onchain, but not yet the token transfer's amount or recipient, and the automatic EVM lane is switched off. This build goes further on Solana: `src/verify.ts` checks the mint, amount, source, signer, destination and memo before a payout counts as paid.
+- **Devnet hackathon build.** Contract v0 uses a placeholder devnet program id with no key, so this build cannot move money; the real devnet id arrives in contract v0.1. There is no mainnet program id. Circle runs a devnet USDC faucet (https://faucet.circle.com) for its official devnet USDC mint.
+- **What exists today:** the GoGoCash withdrawal system supports bank and PromptPay payouts. EVM stablecoin payouts are sent by an admin: before settlement the system checks that the attached transaction succeeded onchain, but not yet the token transfer's amount or recipient, and the automatic EVM lane is switched off. This build goes further on Solana: `src/verify-receipt.ts` requires a finalized receipt whose payout id, recipient and amount match before a payout counts as paid.
 - **Security:** see [SECURITY.md](SECURITY.md). The code is unaudited.
 - **Not in this repo:** the GoGoCash app, the ledger, affiliate network integrations, customer data, and any keys or infrastructure.
 

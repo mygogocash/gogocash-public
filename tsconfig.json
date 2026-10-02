@@ -8,7 +8,16 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node"],
+    // The source is loaded as TypeScript by Node's type stripping (no build
+    // step, no flags), so relative imports name the .ts file and only
+    // erasable syntax is allowed (no enum, namespace or parameter property).
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true
   },
-  "include": ["src", "scripts", "test"]
+  "include": ["src", "scripts", "test"],
+  // examples/ imports packages this repository no longer installs.
+  "exclude": ["examples"]
 }
