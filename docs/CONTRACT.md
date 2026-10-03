@@ -2074,3 +2074,99 @@ Where the plan left a choice open, the safest simple option was taken. Earlier s
 | D-R27 | Per-member limits are inclusive of the current request and summed as `bigint`; `amount` is parsed without floats. | §6.4, §7.6 |
 | D-R28 | Hold and review reasons are set and cleared on defined transitions. | §8.2 |
 | D-R29 | The allowlist mode has a truth-table spec (GRAPH-3). | §7.6 |
+
+## v0.1 changelog (proposed, needs founder approval)
+
+**Status: proposed.** Nothing in this section changes the frozen v0 text above. No consumer may rely on a proposed wording until the founder approves it and it ships under the signed `contract-v0.1` tag. The founder approves, edits or rejects each entry by its number. Approved entries are folded into the sections they name in the PR that tags v0.1; rejected entries stay here, struck through, with the reason.
+
+Each entry names the section, the problem found during implementation (the R2 program and its LiteSVM suite, the R3 SDK, the A-series API rail, or the v0.1 fixtures of §11), and the proposed wording. Unless an entry says otherwise, the fixtures in `test/fixtures/` encode the frozen v0 text.
+
+### Errata found during implementation
+
+**C1. §3.6, code 100 (short instruction data).**
+- Problem: the Anchor 1.2.0 dispatcher (`lang/syn/src/codegen/program/dispatch.rs`) has no length check. Instruction data shorter than 8 bytes matches no discriminator and fails with 101 `InstructionFallbackNotFound`, not 100 `InstructionMissing`. `tests-litesvm/tests/artifact.rs` (`data_shorter_than_a_discriminator_never_dispatches`) pins this. Both codes halt the rail, but under the v0 table the class is `config` (101), not `bug` (100).
+- Proposed wording: 100 row, "Where it arises here": "not raised by this program on Anchor 1.2.0 (short data is reported as 101); kept so that an unexpected 100 is still `bug`". 101 row: "unknown discriminator (wrong program at the address, stub or older build), or instruction data shorter than 8 bytes (Anchor 1.2.0 reports both as 101)". Classes unchanged.
+
+**C2. §7.8, setting the latch, step 2.**
+- Problem: "Zero matched documents means the same cause is already recorded" is true only when the latch is set **and** `cause.key` is in the live `causes`. Zero matches also occur when `rail/resume` cleared the latch, or emptied `causes`, between step 1 and step 2. A race test against a real MongoDB replica set lost a cause on that path: the setter reported "already recorded" for a cause that was never stored.
+- Proposed wording: "2. Further cause: `updateOne({_id: 'halt', halted: true, 'causes.key': {$ne: cause.key}}, {$push: {causes: cause}, $inc: {version: 1}})`. One matched document means the cause is recorded. On zero matched documents, read the latch: if `halted` is `true` and `causes` contains `cause.key`, the cause is already recorded; otherwise run step 1 again. The setter retries a bounded number of times (proposed: 5 attempts in total) and then throws. A setter that throws fails its tick; readers still fail closed, because a read error counts as halted."
+
+**C3. §4.1 and §4.7, message over 1024 bytes.**
+- Problem: §4.1 says the 1024-byte cap is "checked by the renderer and the verifier", but §4.7 has no step and no refusal name for it.
+- Proposed wording, §4.7 step 1: "Lengths: public key exactly 32 bytes, signature exactly 64 bytes, and message at most 1024 bytes (§4.1), else `bad_length`." The SDK already returns `bad_length`. The fixture `ed25519.json` `bad_length_message_1025_bytes` (a valid signature over 1025 bytes) encodes this proposal.
+
+**C4. §4.2 and §4.3, bounds of `<D>` and `<F>`.**
+- Problem: the template fixes the format of `<D>` and `<F>` but not their range, so renderers can disagree on what they refuse.
+- Proposed wording, §4.3 table: "`<D>`: an integer from 0 to 2^64 − 1. `<F>`: an integer from 0 to 2^64 − 1, with `F <= D` (D includes the fee). The renderer refuses anything else." The SDK enforces this. The widest-message fixture (`siws.json` `consent_devnet_max_length`, 813 bytes) uses D = F = 2^64 − 1.
+
+**C5. §3.7, unlisted errors at the `claim` and ATA indices.**
+- Problem: (a) Clarification only: v0 already classifies `Custom(1)` at the `claim` index without the `insufficient lamports` log as `bug`, through the row "any other `Custom(n)` with `n < 6000` and not in 3.6". Naming it removes a possible misreading, by analogy with `Custom(0)`, that a missing log is a truncated-log `hold`. (b) Gap: the table lists only two errors at the `createAssociatedTokenIdempotent` index and does not classify any other error there. (c) Gap: every `claim` row is a `Custom(n)`, so a named (non-`Custom`) instruction error at the `claim` index, such as `InvalidAccountData`, is not classified either.
+- Proposed rows: "`claim` | `Custom(1)` without the `insufficient lamports` log | not attributable to rent | bug (already covered by the any-other row; stated for clarity)", "`claim` | any named (non-`Custom`) error | unexpected | bug" and "`createAssociatedTokenIdempotent` | any other error | unexpected | bug". The SDK already does this. Fixtures: `errors.json` `claim_custom_1_without_log`, `claim_named_unlisted`, `ata_custom_2_unlisted`, `ata_named_unlisted`.
+
+**C6. §6.7, money scale of the `*_minor` strings.**
+- Problem: "The `*_minor` strings are also money (THB scale 2)" describes a 2-decimal THB value, but the strings hold integer satang. The implementation registers them as integer minor units (`MINOR_UNITS`).
+- Proposed wording: "The `*_minor` strings are also money, in integer satang (minor units, `MINOR_UNITS`), and are added with that scale."
+
+**C7. §6.8, the sender-queue index.**
+- Problem: the non-unique index `{solana_claim_state: 1, solana_next_attempt_at: 1}` has no partial filter, so it indexes every `withdraws` row, including every bank-lane row with null keys.
+- Proposed wording: "`{solana_claim_state: 1, solana_next_attempt_at: 1}` with partial filter `{solana_claim_state: {$type: 'string'}}`. The sender's query always names a state, so it can use the partial index." Adding the filter later replaces an index on a large collection, so the change should land before the index first ships.
+
+**C8. §8.2 and §9.2, the review reason of a failed attempt, and lease effects.**
+- Problem: §9.2 sends a landed attempt that failed with a `needs_review` or `bug` class to T11, but T11's reasons (`attempts_exhausted`, `receipt_mismatch`, `inconsistent_rpc`, `deployment_mismatch`) name none for this case. The implementation writes `simulation_rejected`. Separately, T3 and T5 say they clear the lease, but T4, T6, T7, T8, T10 and T11 do not say what happens to it.
+- Proposed wording, T11: "...or an attempt finalized with a program, Anchor or instruction error classed `needs_review` or `bug` (`simulation_rejected`; `bug` also sets the latch)". If the founder wants simulated and landed failures told apart, use a new reason `attempt_failed` instead, retryable by T14. Proposed note under §8.2: "Every transition out of `sending` (T3 to T8, and T12 from `sending`) clears the lease. T10 and T11 start from `submitted`, which holds no lease, and leave it unset." If the implementation keeps the lease through T4 until the broadcast outcome is written, say that here instead; the admin "no live lease" checks then wait up to 120 s.
+
+**C9. §9.1, sender gaps.**
+- Problem: (a) the market-valve re-check gives "T3 hold" without a hold reason, and §6.7's list has none for it. (b) "the 75th percentile" of the prioritization fees does not name a method; the SDK uses nearest-rank. (c) "capped at 60,000 / 90,000" does not say what happens when the simulated units alone exceed the cap; then no allowed limit can succeed, and the SDK refuses to build (`compute_units_exceed_cap`).
+- Proposed wording: (a) add hold reason `market_paused` to §6.7 and to T3. (b) "the 75th percentile by nearest rank: sort the samples ascending and take the value at 1-based rank `ceil(0.75 × n)`; no samples gives 0". (c) "If the simulated units exceed the cap, do not send: T6 `simulation_rejected` with `error_name: compute_units_exceed_cap`, because a resend cannot succeed and a human must compare the CU report."
+
+**C10. §9.5, wire decoding is stricter than listed.**
+- Problem: the SDK wire decoder (`src/wire.ts`) refuses more than §9.5 lists. It requires a version 0 message with no address lookup table, every signer slot filled with a signature that verifies over the message (the fee payer's first), exactly one instruction for the program, a well-formed `claim`, and a `claim` vault equal to the row's `solana_vault`. These checks only refuse more, never less, and every refusal is `wire_decode_mismatch`.
+- Proposed wording, appended to the wire bullet: "The assessor also requires a version 0 message with no address lookup table, every signature present and valid over the message bytes, exactly one instruction for the program id, a well-formed `claim`, and a `claim` vault equal to the row's `solana_vault`. Any failure is `wire_decode_mismatch`."
+
+**C11. §7.3, refusal precedence and a frozen member on `DELETE allowlist`.**
+- Problem: when several refusals apply (for example a `retry` on a row in the wrong state while the latch is set and the acknowledgement differs), §7.3 does not say which code wins. Separately, `DELETE allowlist/:user_id` runs inside `runSerializedWithdrawForRail`, which throws `WithdrawBlockedError` for a `wallet_frozen` member. Through the mandated wrapper (§7.2) that becomes `403 SOLANA_WALLET_FROZEN`, which neither the `DELETE` row nor the admin refusal table lists.
+- Proposed wording: "When more than one refusal applies, the first in this order is returned: state (`409 SOLANA_ADMIN_STATE_CONFLICT`), acknowledgement (`409 SOLANA_ADMIN_ACK_MISMATCH`), rail (`503 SOLANA_RAIL_UNAVAILABLE`), proof (`503 SOLANA_RELEASE_NOT_PROVABLE`, then `503 SOLANA_OUTCOME_UNKNOWN`). Body, id and scope refusals (400, 403) and 404 run before all of these." Add to the `DELETE allowlist` refusals and to the admin refusal table: "`403 SOLANA_WALLET_FROZEN`: the member is `wallet_frozen`; the removal runs inside `runSerializedWithdrawForRail`, whose block is rethrown with this code." If the founder wants an admin to be able to remove a frozen member, that is a separate change to the serialized wrapper.
+
+**C12. §7.7, one claim key per vault before the vault exists.**
+- Problem: the check requires `getProgramAccounts` to return exactly the configured vault, and "any other result" sets the latch. Before `initialize`, the result is `[]`, so a fresh deployment latches at boot under the literal rule.
+- Proposed wording: "Initialize the vault (§3.3.1) before the rail is deployed with its config pins; an empty result before that point sets the latch like any other mismatch." Alternative, if the founder prefers: "An empty result makes the config incomplete without setting the latch; any result that names another account still sets it."
+
+**C13. §7.1 and §7.7, which reason a deployment-marker failure reports.**
+- Problem: §7.1 step 1 lists environment attestation as a membership gate (`disabled`), while the `maintenance` row of the `unavailable_reason` table lists the deployment marker. §7.7 makes the production `deployment_identity` marker part of the attestation, so a missing or mismatched marker matches both.
+- Proposed wording: "A missing or mismatched `deployment_identity` document is reported as `maintenance` (config incomplete). Every other attestation block (environment name, cluster, pilot approval, the local-devnet conditions) is reported as `disabled`."
+
+**C14. §9.3, conservation before T12.**
+- Problem: the conservation check (step 4) counts in-flight rows in `sending`, `submitted` and `needs_review` only. A receipt that lands for a row in `reserved` raises `claim_count` above `N_paid + N_inflight` until step 6 finalizes the row through T12, so the watcher sets the latch for a payout that is about to be recorded correctly.
+- Proposed wording: "Step 6 runs before step 4: non-terminal rows, `reserved` included, whose receipt exists at `finalized` are finalized through T12 first, and conservation is evaluated on the updated counts. A receipt that fails the §3.8 tuple check is never finalized; the watcher sets the latch for it (`receipt_mismatch`), as the reconciler does in T11."
+
+**C15. §7.5, checks of the observation loops while the rail is off.**
+- Problem: §7.5 says `SOLANA_WITHDRAW_ENABLED` does not stop the reconciler and the watcher, and §9 gates both on config completeness, environment attestation and genesis. Neither section says that those checks keep running while the switch is off. An implementation that computes them only for an enabled rail either runs the loops unchecked or never runs them.
+- Proposed wording: "The reconciler and the watcher evaluate config completeness, environment attestation and the genesis hash on every tick whether or not `SOLANA_WITHDRAW_ENABLED` is `'true'`. A failed check skips the tick with no state change (§9.2)."
+
+### Found while building the v0.1 fixtures
+
+**C16. §11, generator location and commands.**
+- Problem: §11 names `scripts/gen-fixtures.mjs`. Ticket #3120 places the generator at `scripts/contract/gen-fixtures.mjs`, which is where it now lives.
+- Proposed wording: "...together with the generator (`scripts/contract/gen-fixtures.mjs`; `npm run gen:fixtures` writes the files, and CI runs `node scripts/contract/gen-fixtures.mjs --check`, also `npm run check:fixtures`, in the `typescript` job of `ci.yml`)...". Add: "The generator imports only `node:` built-ins and never the SDK, so it is an independent oracle; `test/fixtures.test.ts` checks the SDK against every vector and `tests-litesvm/tests/fixtures.rs` re-derives every PDA in Rust."
+
+**C17. §11, encoding rule for byte strings.**
+- Problem: "every byte string is lowercase hex unless the field name ends in `_b58` or `_b64`" conflicts with the table's own field names (`genesis_hash`, `usdc_mint`, `program_id`, `address`), which §5.4 requires to be base58.
+- Proposed wording: "Every `bigint` is a decimal string. Solana addresses, program ids and hashes are base58 (§5.4) under the names in the table (`genesis_hash`, `usdc_mint`, `program_id`, `address`, `derive_program`) and under any name that ends in `_b58`. Every other byte string is lowercase hex, unless the name ends in `_b64`."
+
+**C18. §11, the `contract` field.**
+- Problem: the common format fixes `"contract": "v0"`, but the files ship in v0.1, so it is unclear whether the value tracks the tag.
+- Proposed wording: "`contract` is `"v0"` for every v0.x version: append-only versions share the schema, and the signed tag identifies the exact version."
+
+**C19. §1 item 1 and §2.4, which vectors move to the real devnet id.**
+- Problem: v0.1 "replaces the placeholder vectors". The §3.2 decode vectors, the §3.4 event vector and the §4.6 worked example are frozen reference vectors computed under the placeholder. Moving them would break their printed values and the `siws.json` worked example the parity specs must reproduce.
+- Proposed wording: "v0.1 replaces the placeholder in `clusters.json` and `pda.json` and in `release/manifest.json.programIds.devnet`. The reference vectors of §3.2, §3.4 and §4.6 (`accounts.json`, `siws.json`) stay on the placeholder; they test codecs and the renderer, not a deployment." The generator takes the real id as its one input (`--devnet-program-id`, or the single marked placeholder line), and `test/fixtures.test.ts` requires the manifest and `clusters.json` to agree.
+- Shape of `pda.json` before and after G0a (proposed for approval): the §2.4 column "mainnet USDC mint (derivation only)" is keyed by the mint, not by a cluster. Every vector carries `cluster` (the cluster whose `clusters.json` program id derived it; `devnet` for every vector while the mainnet id is `null`) and `mint_cluster` (the cluster whose USDC mint is in the seeds; `null` for ProgramData, which has one vector because it does not depend on the mint). The mainnet-mint vectors are named `mainnet_usdc_*` and stay `derivation_only: true` under the real devnet id, because the mainnet USDC mint does not exist on devnet. `derivation_only` is `true` when `program_status` is `placeholder` or `mint_cluster` differs from `cluster`. No vector names a cluster whose program id is `null`, so a consumer that selects vectors by `cluster == "mainnet"` gets none until a mainnet id is assigned.
+
+**C20. §3.5 and §9.1, the hold reason of 6014.**
+- Problem: 6014 `VaultTokenAccountFrozen` is class `hold` (plus CRITICAL and the latch), but T3 and §6.7 name no hold reason for it. The SDK and `errors.json` leave it unset.
+- Proposed wording: add hold reason `vault_frozen` to §6.7, T3 and the §9.1 class table, set on 6014.
+- For comparison: the `config` class already names its reason in v0 (§9.1: "T3 hold `config_mismatch`"), so the SDK classifier (`holdReason`) and `errors.json` (`hold_reason`) set `config_mismatch` on every `config`-class code (6001, 6005, 6018, 6019, 101, 3001 to 3003, 3007, 3012, 4100). Only 6014 is left without a reason.
+
+**C21. §8.2, T13 to the same state.**
+- Problem: read literally, T13's from and to sets include `reserved → reserved`: a reverify that finds nothing. `states.json` lists that pair as allowed because the table does.
+- Proposed wording: "A reverify that finds nothing new writes nothing; T13 never targets the row's current state." If approved, `states.json` lists `reserved → reserved` as refused.

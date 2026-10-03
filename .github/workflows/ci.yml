@@ -92,6 +92,11 @@ jobs:
             echo "${untracked}"
             exit 1
           fi
+      # test/fixtures/ is committed. Regenerate every contract fixture in
+      # memory with the dependency-free generator (it never imports src/)
+      # and fail on any byte difference (docs/CONTRACT.md section 11).
+      - name: Contract fixtures match the generator
+        run: node scripts/contract/gen-fixtures.mjs --check
       - run: npm run typecheck
       # The API vendors src/ and typechecks it with strictNullChecks off.
       - run: npm run typecheck:consumer

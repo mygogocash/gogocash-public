@@ -1,0 +1,215 @@
+{
+  "contract": "v0",
+  "file": "mwa-errors.provisional.json",
+  "vectors": [
+    {
+      "id": "mwa_minus_1",
+      "code": -1,
+      "code_type": "number",
+      "origin": "ERROR_AUTHORIZATION_FAILED (declined or identity failure)",
+      "handling": "clear_token_then_reauthorize",
+      "copy_key": "mwa.declined",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_2",
+      "code": -2,
+      "code_type": "number",
+      "origin": "ERROR_INVALID_PAYLOADS",
+      "handling": "bug_report",
+      "copy_key": "mwa.generic",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_3",
+      "code": -3,
+      "code_type": "number",
+      "origin": "ERROR_NOT_SIGNED (member declined)",
+      "handling": "keep_token_no_retry",
+      "copy_key": "mwa.sign_declined",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_4",
+      "code": -4,
+      "code_type": "number",
+      "origin": "ERROR_NOT_SUBMITTED (we never sign-and-send)",
+      "handling": "report",
+      "copy_key": "mwa.generic",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_5",
+      "code": -5,
+      "code_type": "number",
+      "origin": "spec ERROR_NOT_CLONED; unused, since we never clone",
+      "handling": "report",
+      "copy_key": "mwa.generic",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_6",
+      "code": -6,
+      "code_type": "number",
+      "origin": "spec ERROR_TOO_MANY_PAYLOADS",
+      "handling": "bug_report",
+      "copy_key": "mwa.generic",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_7",
+      "code": -7,
+      "code_type": "number",
+      "origin": "spec ERROR_CHAIN_NOT_SUPPORTED",
+      "handling": "devnet_retry_once_on_mainnet_chain",
+      "copy_key": "mwa.wallet_not_supported",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_minus_100",
+      "code": -100,
+      "code_type": "number",
+      "origin": "ERROR_ATTEST_ORIGIN_ANDROID: a web-origin attestation challenge, not a Digital Asset Links failure",
+      "handling": "report",
+      "copy_key": "mwa.attestation_failed",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_other_number",
+      "code": null,
+      "code_type": "other_number",
+      "origin": "wallet-specific JSON-RPC error",
+      "handling": "wallet_error",
+      "copy_key": "mwa.generic",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_error_wallet_not_found",
+      "code": "ERROR_WALLET_NOT_FOUND",
+      "code_type": "string",
+      "origin": "ActivityNotFoundException: no MWA wallet installed",
+      "handling": "retry_without_base_uri_once",
+      "copy_key": "mwa.install_wallet",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_session_not_established_local_association_cancelled_by_user",
+      "code": "Session not established: Local association cancelled by user",
+      "code_type": "string",
+      "origin": "member backed out of the wallet chooser or association",
+      "handling": "cancelled_keep_token",
+      "copy_key": "mwa.cancelled",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_timed_out_waiting_for_local_association_to_be_ready",
+      "code": "Timed out waiting for local association to be ready",
+      "code_type": "string",
+      "origin": "association not ready within 10 s",
+      "handling": "timeout",
+      "copy_key": "mwa.timeout",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_timed_out_waiting_for_response",
+      "code": "Timed out waiting for response",
+      "code_type": "string",
+      "origin": "no wallet response within 90 s",
+      "handling": "timeout_new_challenge",
+      "copy_key": "mwa.timeout",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_failed_to_end_session",
+      "code": "Failed to end session",
+      "code_type": "string",
+      "origin": "the native endSession rejected in transact's finally",
+      "handling": "use_captured_result",
+      "copy_key": "mwa.generic",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_eunspecified",
+      "code": "EUNSPECIFIED",
+      "code_type": "string",
+      "origin": "React Native default code for a bare-Throwable rejection",
+      "handling": "wallet_error",
+      "copy_key": "mwa.generic",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_error_session_timeout",
+      "code": "ERROR_SESSION_TIMEOUT",
+      "code_type": "string",
+      "origin": "browser build only; not emitted on RN Android",
+      "handling": "timeout",
+      "copy_key": "mwa.timeout",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_error_session_closed",
+      "code": "ERROR_SESSION_CLOSED",
+      "code_type": "string",
+      "origin": "browser build only; not emitted on RN Android",
+      "handling": "cancelled_keep_token",
+      "copy_key": "mwa.cancelled",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_error_association_cancelled",
+      "code": "ERROR_ASSOCIATION_CANCELLED",
+      "code_type": "string",
+      "origin": "browser build only; not emitted on RN Android",
+      "handling": "cancelled_keep_token",
+      "copy_key": "mwa.cancelled",
+      "report": false,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    },
+    {
+      "id": "mwa_no_code",
+      "code": null,
+      "code_type": "absent",
+      "origin": "error without code (JS error, such as the non-Android Proxy or LINKING_ERROR)",
+      "handling": "bug_report",
+      "copy_key": "mwa.unavailable",
+      "report": true,
+      "provisional": true,
+      "source": "section 10.8 (PROVISIONAL until the B0 device capture, #2993)"
+    }
+  ]
+}

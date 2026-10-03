@@ -1,0 +1,343 @@
+{
+  "contract": "v0",
+  "file": "pda.json",
+  "vectors": [
+    {
+      "id": "devnet_program_data",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": null,
+      "kind": "program_data",
+      "derive_program": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "seed_names": [
+        "program_id"
+      ],
+      "seeds": [
+        "f540da3f9ec95bcab77e79c3c8beeae22f4393da51cb6a69c8b30ba287cb2575"
+      ],
+      "address": "5TKnZEGM435amgcnJX53LoPoiTsYA3yxUMFmd6UvLF7g",
+      "bump": 254,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_vault",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "vault",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:vault",
+        "mint"
+      ],
+      "seeds": [
+        "7661756c74",
+        "3b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7"
+      ],
+      "address": "4CyfLznBBXqSvKhsLTXgRiqHX5NoxeAe7eaMjfKVsWNG",
+      "bump": 254,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_vault_ata",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "associated_token_account",
+      "derive_program": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "seed_names": [
+        "owner",
+        "token_program",
+        "mint"
+      ],
+      "seeds": [
+        "2fa48440662c81f2c6e2b311bea3e45de177325bf4aaedb7690bb762bd735935",
+        "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "3b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7"
+      ],
+      "address": "CgjjwVZpirGFVos8ugDeYXLVCbnbikEhTM2JUsD58wQZ",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_receipt_1",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "receipt",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:receipt",
+        "vault",
+        "payout_id"
+      ],
+      "seeds": [
+        "72656365697074",
+        "2fa48440662c81f2c6e2b311bea3e45de177325bf4aaedb7690bb762bd735935",
+        "c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021"
+      ],
+      "address": "3abi6WfgCceNoMX3Gq5HcqhBePA6T6oNuy7ahhWUQNJR",
+      "bump": 251,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_receipt_2",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "receipt",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:receipt",
+        "vault",
+        "payout_id"
+      ],
+      "seeds": [
+        "72656365697074",
+        "2fa48440662c81f2c6e2b311bea3e45de177325bf4aaedb7690bb762bd735935",
+        "e1fa9a5932dbe7291d17074c4b2cea2efbdb1ac0123209aa5f36761dbd1bcf9b"
+      ],
+      "address": "8eZjdAD8QvnYcfbHp6cLSiKBJXkGoo4JrBPS3fpHBRMu",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_receipt_3",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "receipt",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:receipt",
+        "vault",
+        "payout_id"
+      ],
+      "seeds": [
+        "72656365697074",
+        "2fa48440662c81f2c6e2b311bea3e45de177325bf4aaedb7690bb762bd735935",
+        "d140c96802fe0c91dd2ddf34597e79efe30d7d8435510a410b7f5e647b5cfbe9"
+      ],
+      "address": "BYyqE7abqWZtWe3BJ5RzJQmKkLcwVpEehW2UEUMZgnA4",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_recipient_ata_test_key_1",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "associated_token_account",
+      "derive_program": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "seed_names": [
+        "owner",
+        "token_program",
+        "mint"
+      ],
+      "seeds": [
+        "fb42d41abb4d2f1daf215c9c992f2b77bd5b28151dba1a4f6a9156690feabf53",
+        "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "3b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7"
+      ],
+      "address": "8ozizdVK9uxjW7HSYXVyquw3Yn2BfNLkPTPLByfieR62",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "devnet_recipient_ata_test_key_2",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "devnet",
+      "kind": "associated_token_account",
+      "derive_program": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "seed_names": [
+        "owner",
+        "token_program",
+        "mint"
+      ],
+      "seeds": [
+        "620c8998d277403a1603b0be654ed8c00c2c5e71c36dbda0bf28a4bd1640d0b4",
+        "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "3b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7"
+      ],
+      "address": "FVJDC7Q6hupTDMMbQQaKMQsWH3XTwb7AeUDgDmYajb4j",
+      "bump": 254,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_vault",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "vault",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:vault",
+        "mint"
+      ],
+      "seeds": [
+        "7661756c74",
+        "c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61"
+      ],
+      "address": "2eDusayXKM6xkoo86HM2iYjVuJtizTwAL9qvrFpZTinb",
+      "bump": 253,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_vault_ata",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "associated_token_account",
+      "derive_program": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "seed_names": [
+        "owner",
+        "token_program",
+        "mint"
+      ],
+      "seeds": [
+        "1864c6aab84c0012ce4aa1ec49ada850badbdeb2670a1581cd38e9c1cd4d5e88",
+        "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61"
+      ],
+      "address": "6zCWEQMokz27mauLBMsUU1Luw9yvf3zadojdM1pqAsrX",
+      "bump": 254,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_receipt_1",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "receipt",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:receipt",
+        "vault",
+        "payout_id"
+      ],
+      "seeds": [
+        "72656365697074",
+        "1864c6aab84c0012ce4aa1ec49ada850badbdeb2670a1581cd38e9c1cd4d5e88",
+        "c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021"
+      ],
+      "address": "Av2ptRUTGRweiHbZxmg82ixJRu5XZiixaGy7mZnQEFPZ",
+      "bump": 253,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_receipt_2",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "receipt",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:receipt",
+        "vault",
+        "payout_id"
+      ],
+      "seeds": [
+        "72656365697074",
+        "1864c6aab84c0012ce4aa1ec49ada850badbdeb2670a1581cd38e9c1cd4d5e88",
+        "e1fa9a5932dbe7291d17074c4b2cea2efbdb1ac0123209aa5f36761dbd1bcf9b"
+      ],
+      "address": "AKNdcUz5iGR88Un5D4tieGAkxJimaZLtw3Vp65sjUUVC",
+      "bump": 254,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_receipt_3",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "receipt",
+      "derive_program": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "seed_names": [
+        "utf8:receipt",
+        "vault",
+        "payout_id"
+      ],
+      "seeds": [
+        "72656365697074",
+        "1864c6aab84c0012ce4aa1ec49ada850badbdeb2670a1581cd38e9c1cd4d5e88",
+        "d140c96802fe0c91dd2ddf34597e79efe30d7d8435510a410b7f5e647b5cfbe9"
+      ],
+      "address": "4fGc85acJ5FgSF95UEemA4smj5mFXuXxH386GD6sTHuw",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_recipient_ata_test_key_1",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "associated_token_account",
+      "derive_program": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "seed_names": [
+        "owner",
+        "token_program",
+        "mint"
+      ],
+      "seeds": [
+        "fb42d41abb4d2f1daf215c9c992f2b77bd5b28151dba1a4f6a9156690feabf53",
+        "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61"
+      ],
+      "address": "59WLigKFPCo26D5NByV2nsdtTjbRvivTPi1gUJrLuDoN",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    },
+    {
+      "id": "mainnet_usdc_recipient_ata_test_key_2",
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_status": "placeholder",
+      "cluster": "devnet",
+      "mint_cluster": "mainnet",
+      "kind": "associated_token_account",
+      "derive_program": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "seed_names": [
+        "owner",
+        "token_program",
+        "mint"
+      ],
+      "seeds": [
+        "620c8998d277403a1603b0be654ed8c00c2c5e71c36dbda0bf28a4bd1640d0b4",
+        "06ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a9",
+        "c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61"
+      ],
+      "address": "D1SwrKTojCs7K6TtXN8We5YnDM4baBeYGpmTSXJB6hXs",
+      "bump": 255,
+      "derivation_only": true,
+      "source": "section 2.4"
+    }
+  ]
+}

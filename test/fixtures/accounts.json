@@ -1,0 +1,723 @@
+{
+  "contract": "v0",
+  "file": "accounts.json",
+  "vectors": [
+    {
+      "id": "vault_layout",
+      "kind": "account_layout",
+      "name": "Vault",
+      "discriminator_preimage": "account:Vault",
+      "discriminator": "d308e82b02987577",
+      "size": 324,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "version",
+          "offset": 8,
+          "size": 1,
+          "type": "u8"
+        },
+        {
+          "name": "bump",
+          "offset": 9,
+          "size": 1,
+          "type": "u8"
+        },
+        {
+          "name": "paused",
+          "offset": 10,
+          "size": 1,
+          "type": "bool"
+        },
+        {
+          "name": "decimals",
+          "offset": 11,
+          "size": 1,
+          "type": "u8"
+        },
+        {
+          "name": "mint",
+          "offset": 12,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "vault_token_account",
+          "offset": 44,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "admin",
+          "offset": 76,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "pending_admin",
+          "offset": 108,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "guardian",
+          "offset": 140,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "claim_authority",
+          "offset": 172,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "max_per_claim",
+          "offset": 204,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "max_per_day",
+          "offset": 212,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "current_day",
+          "offset": 220,
+          "size": 8,
+          "type": "i64"
+        },
+        {
+          "name": "claimed_today",
+          "offset": 228,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "total_claimed",
+          "offset": 236,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "claim_count",
+          "offset": 244,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "total_withdrawn",
+          "offset": 252,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "reserved",
+          "offset": 260,
+          "size": 64,
+          "type": "[u8;64]"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.2"
+    },
+    {
+      "id": "receipt_layout",
+      "kind": "account_layout",
+      "name": "Receipt",
+      "discriminator_preimage": "account:Receipt",
+      "discriminator": "279a496a50669199",
+      "size": 89,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "bump",
+          "offset": 8,
+          "size": 1,
+          "type": "u8"
+        },
+        {
+          "name": "payout_id",
+          "offset": 9,
+          "size": 32,
+          "type": "[u8;32]"
+        },
+        {
+          "name": "recipient",
+          "offset": 41,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "amount",
+          "offset": 73,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "claimed_at",
+          "offset": 81,
+          "size": 8,
+          "type": "i64"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.2"
+    },
+    {
+      "id": "payout_claimed_layout",
+      "kind": "event_layout",
+      "name": "PayoutClaimed",
+      "discriminator_preimage": "event:PayoutClaimed",
+      "discriminator": "c8276970743f3a95",
+      "size": 184,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "vault",
+          "offset": 8,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "receipt",
+          "offset": 40,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "payout_id",
+          "offset": 72,
+          "size": 32,
+          "type": "[u8;32]"
+        },
+        {
+          "name": "recipient",
+          "offset": 104,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "amount",
+          "offset": 136,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "claimed_at",
+          "offset": 144,
+          "size": 8,
+          "type": "i64"
+        },
+        {
+          "name": "day",
+          "offset": 152,
+          "size": 8,
+          "type": "i64"
+        },
+        {
+          "name": "claimed_today",
+          "offset": 160,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "claim_count",
+          "offset": 168,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "total_claimed",
+          "offset": 176,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.4"
+    },
+    {
+      "id": "initialize_layout",
+      "kind": "instruction_layout",
+      "name": "initialize",
+      "discriminator_preimage": "global:initialize",
+      "discriminator": "afaf6d1f0d989bed",
+      "size": 120,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "admin",
+          "offset": 8,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "guardian",
+          "offset": 40,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "claim_authority",
+          "offset": 72,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "max_per_claim",
+          "offset": 104,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "max_per_day",
+          "offset": 112,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "claim_layout",
+      "kind": "instruction_layout",
+      "name": "claim",
+      "discriminator_preimage": "global:claim",
+      "discriminator": "3ec6d6c1d59f6cd2",
+      "size": 56,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "payout_id",
+          "offset": 8,
+          "size": 32,
+          "type": "[u8;32]"
+        },
+        {
+          "name": "amount",
+          "offset": 40,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "expires_at",
+          "offset": 48,
+          "size": 8,
+          "type": "i64"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "pause_layout",
+      "kind": "instruction_layout",
+      "name": "pause",
+      "discriminator_preimage": "global:pause",
+      "discriminator": "d316ddfb4a79c12f",
+      "size": 8,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "unpause_layout",
+      "kind": "instruction_layout",
+      "name": "unpause",
+      "discriminator_preimage": "global:unpause",
+      "discriminator": "a99004260a8dbcff",
+      "size": 8,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "update_config_layout",
+      "kind": "instruction_layout",
+      "name": "update_config",
+      "discriminator_preimage": "global:update_config",
+      "discriminator": "1d9efcbf0a53db63",
+      "size": 88,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "guardian",
+          "offset": 8,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "claim_authority",
+          "offset": 40,
+          "size": 32,
+          "type": "Pubkey"
+        },
+        {
+          "name": "max_per_claim",
+          "offset": 72,
+          "size": 8,
+          "type": "u64"
+        },
+        {
+          "name": "max_per_day",
+          "offset": 80,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "propose_admin_layout",
+      "kind": "instruction_layout",
+      "name": "propose_admin",
+      "discriminator_preimage": "global:propose_admin",
+      "discriminator": "79d6c7d4572775ea",
+      "size": 40,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "new_admin",
+          "offset": 8,
+          "size": 32,
+          "type": "Pubkey"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "accept_admin_layout",
+      "kind": "instruction_layout",
+      "name": "accept_admin",
+      "discriminator_preimage": "global:accept_admin",
+      "discriminator": "702a2d5a74b50daa",
+      "size": 8,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "withdraw_layout",
+      "kind": "instruction_layout",
+      "name": "withdraw",
+      "discriminator_preimage": "global:withdraw",
+      "discriminator": "b712469c946da122",
+      "size": 16,
+      "fields": [
+        {
+          "name": "discriminator",
+          "offset": 0,
+          "size": 8,
+          "type": "[u8;8]"
+        },
+        {
+          "name": "amount",
+          "offset": 8,
+          "size": 8,
+          "type": "u64"
+        }
+      ],
+      "inputs": null,
+      "bytes": null,
+      "source": "section 3.3"
+    },
+    {
+      "id": "vault_v1_devnet",
+      "kind": "account",
+      "name": "Vault",
+      "discriminator_preimage": "account:Vault",
+      "discriminator": "d308e82b02987577",
+      "size": 324,
+      "fields": null,
+      "inputs": {
+        "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+        "address": "4CyfLznBBXqSvKhsLTXgRiqHX5NoxeAe7eaMjfKVsWNG",
+        "bump": 254,
+        "version": 1,
+        "paused": true,
+        "decimals": 6,
+        "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+        "vault_token_account": "CgjjwVZpirGFVos8ugDeYXLVCbnbikEhTM2JUsD58wQZ",
+        "admin": "DbT4Ga79iuKxMZaZu4uXwkwijdtVjHXU9eHKHDuLvgth",
+        "pending_admin": "11111111111111111111111111111111",
+        "guardian": "EMGzPrfWeBk7E8vyrorptmRVUHtSFMhVkQKQGNSz8fFk",
+        "claim_authority": "iKBifpskDNLCbcbVQgWiPYXToJGr4ou8gxsdU92W843",
+        "max_per_claim": "5000000",
+        "max_per_day": "20000000",
+        "current_day": "20728",
+        "claimed_today": "0",
+        "total_claimed": "0",
+        "claim_count": "0",
+        "total_withdrawn": "0",
+        "reserved": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "bytes": "d308e82b0298757701fe01063b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7ad9e88ce36000f85568c63289a49ddb5ad5c2e62d1ef6ee076f8cf409e6538c6bb1f73e0018299d2baa571fb466bbc997d040e1dfcef3a49b10e363542b95c2a0000000000000000000000000000000000000000000000000000000000000000c659a02bdcd91d24d2608551c37a158ca8fe04fde0365b347de421756e22f2b70a955ff259cacd683426a5247f00cc6d836abe6e88a776cf86397852dbd90c04404b4c0000000000002d310100000000f850000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "source": "section 3.2 decode vector V1 (placeholder program id, devnet mint)"
+    },
+    {
+      "id": "vault_after_first_claim_devnet",
+      "kind": "account",
+      "name": "Vault",
+      "discriminator_preimage": "account:Vault",
+      "discriminator": "d308e82b02987577",
+      "size": 324,
+      "fields": null,
+      "inputs": {
+        "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+        "address": "4CyfLznBBXqSvKhsLTXgRiqHX5NoxeAe7eaMjfKVsWNG",
+        "bump": 254,
+        "version": 1,
+        "paused": false,
+        "decimals": 6,
+        "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+        "vault_token_account": "CgjjwVZpirGFVos8ugDeYXLVCbnbikEhTM2JUsD58wQZ",
+        "admin": "DbT4Ga79iuKxMZaZu4uXwkwijdtVjHXU9eHKHDuLvgth",
+        "pending_admin": "11111111111111111111111111111111",
+        "guardian": "EMGzPrfWeBk7E8vyrorptmRVUHtSFMhVkQKQGNSz8fFk",
+        "claim_authority": "iKBifpskDNLCbcbVQgWiPYXToJGr4ou8gxsdU92W843",
+        "max_per_claim": "5000000",
+        "max_per_day": "20000000",
+        "current_day": "20728",
+        "claimed_today": "3558875",
+        "total_claimed": "3558875",
+        "claim_count": "1",
+        "total_withdrawn": "0",
+        "reserved": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "bytes": "d308e82b0298757701fe00063b442cb3912157f13a933d0134282d032b5ffecd01a2dbf1b7790608df002ea7ad9e88ce36000f85568c63289a49ddb5ad5c2e62d1ef6ee076f8cf409e6538c6bb1f73e0018299d2baa571fb466bbc997d040e1dfcef3a49b10e363542b95c2a0000000000000000000000000000000000000000000000000000000000000000c659a02bdcd91d24d2608551c37a158ca8fe04fde0365b347de421756e22f2b70a955ff259cacd683426a5247f00cc6d836abe6e88a776cf86397852dbd90c04404b4c0000000000002d310100000000f850000000000000db4d360000000000db4d3600000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "source": "section 3.2 (V1 unpaused, after the section 3.4 claim)"
+    },
+    {
+      "id": "receipt_v1_devnet",
+      "kind": "account",
+      "name": "Receipt",
+      "discriminator_preimage": "account:Receipt",
+      "discriminator": "279a496a50669199",
+      "size": 89,
+      "fields": null,
+      "inputs": {
+        "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+        "address": "3abi6WfgCceNoMX3Gq5HcqhBePA6T6oNuy7ahhWUQNJR",
+        "vault": "4CyfLznBBXqSvKhsLTXgRiqHX5NoxeAe7eaMjfKVsWNG",
+        "bump": 251,
+        "payout_id": "c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021",
+        "recipient": "HupSGTuM8ra7TEsYhF4M2NuDt3iEPQVJv3WGnrtDg9D4",
+        "amount": "3558875",
+        "claimed_at": "1790910270"
+      },
+      "bytes": "279a496a50669199fbc6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021fb42d41abb4d2f1daf215c9c992f2b77bd5b28151dba1a4f6a9156690feabf53db4d3600000000003e1fbf6a00000000",
+      "source": "section 3.2 decode vector (placeholder program id, devnet mint)"
+    },
+    {
+      "id": "payout_claimed_first_claim_devnet",
+      "kind": "event",
+      "name": "PayoutClaimed",
+      "discriminator_preimage": "event:PayoutClaimed",
+      "discriminator": "c8276970743f3a95",
+      "size": 184,
+      "fields": null,
+      "inputs": {
+        "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+        "vault": "4CyfLznBBXqSvKhsLTXgRiqHX5NoxeAe7eaMjfKVsWNG",
+        "receipt": "3abi6WfgCceNoMX3Gq5HcqhBePA6T6oNuy7ahhWUQNJR",
+        "payout_id": "c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021",
+        "recipient": "HupSGTuM8ra7TEsYhF4M2NuDt3iEPQVJv3WGnrtDg9D4",
+        "amount": "3558875",
+        "claimed_at": "1790910270",
+        "day": "20728",
+        "claimed_today": "3558875",
+        "claim_count": "1",
+        "total_claimed": "3558875"
+      },
+      "bytes": "c8276970743f3a952fa48440662c81f2c6e2b311bea3e45de177325bf4aaedb7690bb762bd7359352652c91e3e8130f20cecf23d783594457c6f7a3bd1429e63fa9d2bb545e1704ec6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021fb42d41abb4d2f1daf215c9c992f2b77bd5b28151dba1a4f6a9156690feabf53db4d3600000000003e1fbf6a00000000f850000000000000db4d3600000000000100000000000000db4d360000000000",
+      "source": "section 3.4 vector (first claim of the day)"
+    },
+    {
+      "id": "initialize_data",
+      "kind": "instruction_data",
+      "name": "initialize",
+      "discriminator_preimage": "global:initialize",
+      "discriminator": "afaf6d1f0d989bed",
+      "size": 120,
+      "fields": null,
+      "inputs": {
+        "admin": "DbT4Ga79iuKxMZaZu4uXwkwijdtVjHXU9eHKHDuLvgth",
+        "guardian": "EMGzPrfWeBk7E8vyrorptmRVUHtSFMhVkQKQGNSz8fFk",
+        "claim_authority": "iKBifpskDNLCbcbVQgWiPYXToJGr4ou8gxsdU92W843",
+        "max_per_claim": "5000000",
+        "max_per_day": "20000000"
+      },
+      "bytes": "afaf6d1f0d989bedbb1f73e0018299d2baa571fb466bbc997d040e1dfcef3a49b10e363542b95c2ac659a02bdcd91d24d2608551c37a158ca8fe04fde0365b347de421756e22f2b70a955ff259cacd683426a5247f00cc6d836abe6e88a776cf86397852dbd90c04404b4c0000000000002d310100000000",
+      "source": "section 3.3 (fixture role addresses)"
+    },
+    {
+      "id": "claim_data",
+      "kind": "instruction_data",
+      "name": "claim",
+      "discriminator_preimage": "global:claim",
+      "discriminator": "3ec6d6c1d59f6cd2",
+      "size": 56,
+      "fields": null,
+      "inputs": {
+        "payout_id": "c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021",
+        "amount": "3558875",
+        "expires_at": "1790910565"
+      },
+      "bytes": "3ec6d6c1d59f6cd2c6a87a9e170995438a78874587cb95773a9fa752c5b1633c9e7ae23928c88021db4d3600000000006520bf6a00000000",
+      "source": "section 3.3 claim data vector"
+    },
+    {
+      "id": "pause_data",
+      "kind": "instruction_data",
+      "name": "pause",
+      "discriminator_preimage": "global:pause",
+      "discriminator": "d316ddfb4a79c12f",
+      "size": 8,
+      "fields": null,
+      "inputs": {},
+      "bytes": "d316ddfb4a79c12f",
+      "source": "section 3.3 (fixture role addresses)"
+    },
+    {
+      "id": "unpause_data",
+      "kind": "instruction_data",
+      "name": "unpause",
+      "discriminator_preimage": "global:unpause",
+      "discriminator": "a99004260a8dbcff",
+      "size": 8,
+      "fields": null,
+      "inputs": {},
+      "bytes": "a99004260a8dbcff",
+      "source": "section 3.3 (fixture role addresses)"
+    },
+    {
+      "id": "update_config_data",
+      "kind": "instruction_data",
+      "name": "update_config",
+      "discriminator_preimage": "global:update_config",
+      "discriminator": "1d9efcbf0a53db63",
+      "size": 88,
+      "fields": null,
+      "inputs": {
+        "guardian": "EMGzPrfWeBk7E8vyrorptmRVUHtSFMhVkQKQGNSz8fFk",
+        "claim_authority": "iKBifpskDNLCbcbVQgWiPYXToJGr4ou8gxsdU92W843",
+        "max_per_claim": "5000000",
+        "max_per_day": "20000000"
+      },
+      "bytes": "1d9efcbf0a53db63c659a02bdcd91d24d2608551c37a158ca8fe04fde0365b347de421756e22f2b70a955ff259cacd683426a5247f00cc6d836abe6e88a776cf86397852dbd90c04404b4c0000000000002d310100000000",
+      "source": "section 3.3 (fixture role addresses)"
+    },
+    {
+      "id": "propose_admin_data",
+      "kind": "instruction_data",
+      "name": "propose_admin",
+      "discriminator_preimage": "global:propose_admin",
+      "discriminator": "79d6c7d4572775ea",
+      "size": 40,
+      "fields": null,
+      "inputs": {
+        "new_admin": "EZcpxj7nrwXdJBmQknY5curLzGGf2uem2VWUu5kkVLok"
+      },
+      "bytes": "79d6c7d4572775eac983068a6ab8f38ad0cbc9d93a4bb692c2099250a72a7cb9b7e6b70c669af433",
+      "source": "section 3.3 (fixture role addresses)"
+    },
+    {
+      "id": "accept_admin_data",
+      "kind": "instruction_data",
+      "name": "accept_admin",
+      "discriminator_preimage": "global:accept_admin",
+      "discriminator": "702a2d5a74b50daa",
+      "size": 8,
+      "fields": null,
+      "inputs": {},
+      "bytes": "702a2d5a74b50daa",
+      "source": "section 3.3 (fixture role addresses)"
+    },
+    {
+      "id": "withdraw_data",
+      "kind": "instruction_data",
+      "name": "withdraw",
+      "discriminator_preimage": "global:withdraw",
+      "discriminator": "b712469c946da122",
+      "size": 16,
+      "fields": null,
+      "inputs": {
+        "amount": "1000000"
+      },
+      "bytes": "b712469c946da12240420f0000000000",
+      "source": "section 3.3 (fixture role addresses)"
+    }
+  ]
+}

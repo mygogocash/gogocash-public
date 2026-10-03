@@ -12,8 +12,11 @@
 /** Off-chain handling classes (section 3.5). */
 export type ErrorClass = "retry" | "hold" | "needs_review" | "already_claimed" | "bug" | "config";
 
-/** Hold reasons section 9.1 names for specific errors. */
-export type HoldReason = "program_paused" | "day_cap" | "vault_low" | "fee_payer_low";
+/**
+ * T3 hold reasons from the section 9.1 class table: one per specific `hold`
+ * error, and `config_mismatch` for every `config`-class error.
+ */
+export type HoldReason = "program_paused" | "day_cap" | "vault_low" | "fee_payer_low" | "config_mismatch";
 
 export type ProgramErrorEntry = {
   readonly code: number;
@@ -149,6 +152,10 @@ export type ErrorClassification = {
   readonly haltLatch: boolean;
   /** Raise a CRITICAL alert (same cases as `haltLatch`). */
   readonly critical: boolean;
+  /**
+   * The T3 hold reason (section 9.1): set for `hold` errors that name one
+   * (6014 names none in v0) and `config_mismatch` for every `config` error.
+   */
   readonly holdReason?: HoldReason;
 };
 
@@ -158,12 +165,14 @@ function classification(
   extra: { code?: number; name?: string; holdReason?: HoldReason; forceCritical?: boolean } = {},
 ): ErrorClassification {
   const critical = errorClass === "bug" || errorClass === "config" || extra.forceCritical === true;
+  // Section 9.1: a `config` error is a T3 hold with `config_mismatch`.
+  const holdReason = extra.holdReason ?? (errorClass === "config" ? "config_mismatch" : undefined);
   return {
     class: errorClass,
     source,
     ...(extra.code === undefined ? {} : { code: extra.code }),
     ...(extra.name === undefined ? {} : { name: extra.name }),
-    ...(extra.holdReason === undefined ? {} : { holdReason: extra.holdReason }),
+    ...(holdReason === undefined ? {} : { holdReason }),
     haltLatch: critical,
     critical,
   };

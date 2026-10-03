@@ -1,0 +1,48 @@
+{
+  "contract": "v0",
+  "file": "clusters.json",
+  "vectors": [
+    {
+      "id": "devnet",
+      "cluster": "devnet",
+      "genesis_hash": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+      "caip2_chain_id": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+      "chain_id": "solana:devnet",
+      "usdc_mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+      "usdc_mint_owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "usdc_decimals": 6,
+      "program_id": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+      "program_id_status": "placeholder",
+      "programs": {
+        "token": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "associated_token": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        "system": "11111111111111111111111111111111",
+        "bpf_loader_upgradeable": "BPFLoaderUpgradeab1e11111111111111111111111",
+        "compute_budget": "ComputeBudget111111111111111111111111111111",
+        "token_2022_refused": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+      },
+      "source": "sections 2.1 to 2.4"
+    },
+    {
+      "id": "mainnet",
+      "cluster": "mainnet",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+      "caip2_chain_id": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "chain_id": "solana:mainnet",
+      "usdc_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "usdc_mint_owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "usdc_decimals": 6,
+      "program_id": null,
+      "program_id_status": "unassigned",
+      "programs": {
+        "token": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "associated_token": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        "system": "11111111111111111111111111111111",
+        "bpf_loader_upgradeable": "BPFLoaderUpgradeab1e11111111111111111111111",
+        "compute_budget": "ComputeBudget111111111111111111111111111111",
+        "token_2022_refused": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+      },
+      "source": "sections 2.1 to 2.4"
+    }
+  ]
+}
