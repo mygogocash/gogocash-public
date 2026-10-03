@@ -344,7 +344,11 @@ fn pda_vectors_use_the_suite_program_id_and_match_its_helpers() {
         assert_eq!(cluster, "devnet", "{id}: cluster");
         let mint_cluster = vector.get("mint_cluster").as_opt_str();
         let is_program_data = vector.get("kind").as_str() == "program_data";
-        assert_eq!(mint_cluster.is_none(), is_program_data, "{id}: mint_cluster");
+        assert_eq!(
+            mint_cluster.is_none(),
+            is_program_data,
+            "{id}: mint_cluster"
+        );
         let other_mint = mint_cluster.is_some_and(|mint| mint != cluster);
         let derivation_only = vector.get("derivation_only").as_bool();
         let expected_only = status == "placeholder" || other_mint;
