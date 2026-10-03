@@ -1,4 +1,5 @@
-node_modules/
+# No trailing slash: a worktree may link node_modules as a symlink.
+node_modules
 dist/
 coverage/
 # Throwaway devnet keypairs created by `npm run demo`. Never commit keys.

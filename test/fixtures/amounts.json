@@ -1,0 +1,625 @@
+{
+  "contract": "v0",
+  "file": "amounts.json",
+  "vectors": [
+    {
+      "id": "thb_basic",
+      "kind": "conversion",
+      "requested_minor": "12500",
+      "fee_minor": "0",
+      "net_minor": "12500",
+      "thb_per_usd_e8": "3512345678",
+      "usdc_atomic": "3558875",
+      "value_minor": "12500",
+      "member_keeps_remainder": {
+        "deducted_minor": "12500",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "12500",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "section 6.3 worked example"
+    },
+    {
+      "id": "thb_with_fee",
+      "kind": "conversion",
+      "requested_minor": "15000",
+      "fee_minor": "1500",
+      "net_minor": "13500",
+      "thb_per_usd_e8": "3398765432",
+      "usdc_atomic": "3972030",
+      "value_minor": "13500",
+      "member_keeps_remainder": {
+        "deducted_minor": "15000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "15000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "section 6.3 worked example"
+    },
+    {
+      "id": "provider_rate_2026_10_02",
+      "kind": "conversion",
+      "requested_minor": "10000",
+      "fee_minor": "1000",
+      "net_minor": "9000",
+      "thb_per_usd_e8": "3367000000",
+      "usdc_atomic": "2673002",
+      "value_minor": "9000",
+      "member_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "section 6.3 worked example"
+    },
+    {
+      "id": "thb_exact_minimum",
+      "kind": "conversion",
+      "requested_minor": "4000",
+      "fee_minor": "0",
+      "net_minor": "4000",
+      "thb_per_usd_e8": "4000000000",
+      "usdc_atomic": "1000000",
+      "value_minor": "4000",
+      "member_keeps_remainder": {
+        "deducted_minor": "4000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "4000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "section 6.3 worked example"
+    },
+    {
+      "id": "edge_rate_policies_differ",
+      "kind": "conversion",
+      "requested_minor": "12600",
+      "fee_minor": "100",
+      "net_minor": "12500",
+      "thb_per_usd_e8": "2600000000000",
+      "usdc_atomic": "4807",
+      "value_minor": "12499",
+      "member_keeps_remainder": {
+        "deducted_minor": "12599",
+        "remainder_minor": "1",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "12600",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "1"
+      },
+      "policies_deduct_equal": false,
+      "expect": "ok",
+      "source": "section 6.3 worked example"
+    },
+    {
+      "id": "edge_rate_exactly_1e12",
+      "kind": "conversion",
+      "requested_minor": "10000",
+      "fee_minor": "0",
+      "net_minor": "10000",
+      "thb_per_usd_e8": "1000000000000",
+      "usdc_atomic": "10000",
+      "value_minor": "10000",
+      "member_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "section 6.3 (rate = 10^12: still no remainder)"
+    },
+    {
+      "id": "edge_rate_fx_band_min",
+      "kind": "conversion",
+      "requested_minor": "10000",
+      "fee_minor": "1000",
+      "net_minor": "9000",
+      "thb_per_usd_e8": "2500000000",
+      "usdc_atomic": "3600000",
+      "value_minor": "9000",
+      "member_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "sections 6.3 and 6.6 (SOLANA_WITHDRAW_FX_MIN_E8 default)"
+    },
+    {
+      "id": "edge_rate_fx_band_max",
+      "kind": "conversion",
+      "requested_minor": "10000",
+      "fee_minor": "1000",
+      "net_minor": "9000",
+      "thb_per_usd_e8": "4500000000",
+      "usdc_atomic": "2000000",
+      "value_minor": "9000",
+      "member_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "10000",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "sections 6.3 and 6.6 (SOLANA_WITHDRAW_FX_MAX_E8 default)"
+    },
+    {
+      "id": "edge_net_one_satang",
+      "kind": "conversion",
+      "requested_minor": "101",
+      "fee_minor": "100",
+      "net_minor": "1",
+      "thb_per_usd_e8": "3367000000",
+      "usdc_atomic": "297",
+      "value_minor": "1",
+      "member_keeps_remainder": {
+        "deducted_minor": "101",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "treasury_keeps_remainder": {
+        "deducted_minor": "101",
+        "remainder_minor": "0",
+        "treasury_dust_minor": "0"
+      },
+      "policies_deduct_equal": true,
+      "expect": "ok",
+      "source": "section 6.3 (net_minor = 1)"
+    },
+    {
+      "id": "d4_invariant_sweep",
+      "kind": "d4_invariant",
+      "statement": "for 1 <= thb_per_usd_e8 < 10^12 and net_minor > 0: value_minor == net_minor, so both dust policies deduct the same satang and the remainder is 0",
+      "rate_max_exclusive": "1000000000000",
+      "sweep_seed": "gogocash contract v0 d4 sweep",
+      "sweep_count": 10000,
+      "sweep_rule": "h = sha256(seed + ' ' + i); fee = be_u64(h[16..24]) mod 100000; net = 1 + be_u64(h[0..8]) mod 999999899999; rate = 1 + be_u64(h[8..16]) mod 999999999999; requested = net + fee",
+      "line_format": "requested,fee,rate,usdc,value,member_deducted,member_remainder,treasury_deducted,treasury_dust LF",
+      "lines_sha256": "9fd3c9e7821fc730f3f609aed8b570836880949a531c6ef34f36f470c5892924",
+      "expect": "ok",
+      "source": "section 6.3 (founder decision D4)"
+    },
+    {
+      "id": "bounds_ok_provider_rate",
+      "kind": "bounds",
+      "amount": "100.00",
+      "fee_minor": "1000",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "10000",
+      "usdc_atomic": "2673002",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_ok_exact_minimum",
+      "kind": "bounds",
+      "amount": "40.00",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "4000000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "4000",
+      "usdc_atomic": "1000000",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_ok_exact_maximum",
+      "kind": "bounds",
+      "amount": "168.35",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "16835",
+      "usdc_atomic": "5000000",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_ok_integer_amount",
+      "kind": "bounds",
+      "amount": "100",
+      "fee_minor": "1000",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "10000",
+      "usdc_atomic": "2673002",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_empty",
+      "kind": "bounds",
+      "amount": "",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_zero",
+      "kind": "bounds",
+      "amount": "0",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_zero_decimals",
+      "kind": "bounds",
+      "amount": "0.00",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_three_decimals",
+      "kind": "bounds",
+      "amount": "1.234",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_leading_zero",
+      "kind": "bounds",
+      "amount": "01",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_negative",
+      "kind": "bounds",
+      "amount": "-1",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_exponent",
+      "kind": "bounds",
+      "amount": "1e3",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_eleven_digits",
+      "kind": "bounds",
+      "amount": "12345678901",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_leading_space",
+      "kind": "bounds",
+      "amount": " 100",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_trailing_dot",
+      "kind": "bounds",
+      "amount": "100.",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_invalid_amount_separator",
+      "kind": "bounds",
+      "amount": "1,000",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": null,
+      "usdc_atomic": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_fee_equals_amount",
+      "kind": "bounds",
+      "amount": "1.00",
+      "fee_minor": "100",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "100",
+      "usdc_atomic": null,
+      "expect": "fee_exceeds_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_fee_exceeds_amount",
+      "kind": "bounds",
+      "amount": "1.00",
+      "fee_minor": "101",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "100",
+      "usdc_atomic": null,
+      "expect": "fee_exceeds_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_fee_checked_before_minimum",
+      "kind": "bounds",
+      "amount": "0.50",
+      "fee_minor": "60",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "50",
+      "usdc_atomic": null,
+      "expect": "fee_exceeds_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_exceeds_u64_synthetic_rate",
+      "kind": "bounds",
+      "amount": "9999999999.99",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "1",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "999999999999",
+      "usdc_atomic": "999999999999000000000000",
+      "expect": "exceeds_u64",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_below_minimum",
+      "kind": "bounds",
+      "amount": "30.00",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "3000",
+      "usdc_atomic": "891000",
+      "expect": "below_minimum",
+      "source": "section 6.4"
+    },
+    {
+      "id": "bounds_above_maximum",
+      "kind": "bounds",
+      "amount": "200.00",
+      "fee_minor": "0",
+      "thb_per_usd_e8": "3367000000",
+      "min_payout_atomic": "1000000",
+      "max_payout_atomic": "5000000",
+      "requested_minor": "20000",
+      "usdc_atomic": "5940005",
+      "expect": "above_maximum",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_integer",
+      "kind": "parse_thb",
+      "amount": "100",
+      "requested_minor": "10000",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_one_decimal",
+      "kind": "parse_thb",
+      "amount": "100.5",
+      "requested_minor": "10050",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_one_satang",
+      "kind": "parse_thb",
+      "amount": "0.01",
+      "requested_minor": "1",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_max_digits",
+      "kind": "parse_thb",
+      "amount": "9999999999.99",
+      "requested_minor": "999999999999",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_zero",
+      "kind": "parse_thb",
+      "amount": "0",
+      "requested_minor": "0",
+      "expect": "ok",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_invalid_three_decimals",
+      "kind": "parse_thb",
+      "amount": "1.001",
+      "requested_minor": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "parse_invalid_leading_zero",
+      "kind": "parse_thb",
+      "amount": "00.10",
+      "requested_minor": null,
+      "expect": "invalid_amount",
+      "source": "section 6.4"
+    },
+    {
+      "id": "display_usdc_thb_with_fee",
+      "kind": "display_usdc",
+      "usdc_atomic": "3972030",
+      "text": "3.972030",
+      "source": "section 4.3 <U>"
+    },
+    {
+      "id": "display_usdc_one",
+      "kind": "display_usdc",
+      "usdc_atomic": "1000000",
+      "text": "1.000000",
+      "source": "section 4.3 <U>"
+    },
+    {
+      "id": "display_usdc_one_atomic",
+      "kind": "display_usdc",
+      "usdc_atomic": "1",
+      "text": "0.000001",
+      "source": "section 4.3 <U>"
+    },
+    {
+      "id": "display_usdc_zero",
+      "kind": "display_usdc",
+      "usdc_atomic": "0",
+      "text": "0.000000",
+      "source": "section 4.3 <U>"
+    },
+    {
+      "id": "display_usdc_u64_max",
+      "kind": "display_usdc",
+      "usdc_atomic": "18446744073709551615",
+      "text": "18446744073709.551615",
+      "source": "section 4.3 <U>"
+    },
+    {
+      "id": "display_minor_150",
+      "kind": "display_minor",
+      "minor": "15000",
+      "text": "150.00",
+      "source": "section 4.3 <D> and <F>"
+    },
+    {
+      "id": "display_minor_fee_15",
+      "kind": "display_minor",
+      "minor": "1500",
+      "text": "15.00",
+      "source": "section 4.3 <D> and <F>"
+    },
+    {
+      "id": "display_minor_zero",
+      "kind": "display_minor",
+      "minor": "0",
+      "text": "0.00",
+      "source": "section 4.3 <D> and <F>"
+    },
+    {
+      "id": "display_minor_one_satang",
+      "kind": "display_minor",
+      "minor": "1",
+      "text": "0.01",
+      "source": "section 4.3 <D> and <F>"
+    },
+    {
+      "id": "display_minor_u64_max",
+      "kind": "display_minor",
+      "minor": "18446744073709551615",
+      "text": "184467440737095516.15",
+      "source": "section 4.3 <D> and <F>"
+    }
+  ]
+}

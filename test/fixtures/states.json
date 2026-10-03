@@ -1,0 +1,840 @@
+{
+  "contract": "v0",
+  "file": "states.json",
+  "vectors": [
+    {
+      "id": "state_reserved",
+      "kind": "state",
+      "state": "reserved",
+      "terminal": false,
+      "slot_active": true,
+      "display_state": "processing",
+      "ledger_status": "pending",
+      "balance": "reserved",
+      "source": "sections 8.1 and 8.3"
+    },
+    {
+      "id": "state_sending",
+      "kind": "state",
+      "state": "sending",
+      "terminal": false,
+      "slot_active": true,
+      "display_state": "processing",
+      "ledger_status": "pending",
+      "balance": "reserved",
+      "source": "sections 8.1 and 8.3"
+    },
+    {
+      "id": "state_submitted",
+      "kind": "state",
+      "state": "submitted",
+      "terminal": false,
+      "slot_active": true,
+      "display_state": "processing",
+      "ledger_status": "pending",
+      "balance": "reserved",
+      "source": "sections 8.1 and 8.3"
+    },
+    {
+      "id": "state_needs_review",
+      "kind": "state",
+      "state": "needs_review",
+      "terminal": false,
+      "slot_active": true,
+      "display_state": "processing",
+      "ledger_status": "pending",
+      "balance": "reserved",
+      "source": "sections 8.1 and 8.3"
+    },
+    {
+      "id": "state_finalized",
+      "kind": "state",
+      "state": "finalized",
+      "terminal": true,
+      "slot_active": null,
+      "display_state": "paid",
+      "ledger_status": "paid",
+      "balance": "deducted",
+      "source": "sections 8.1 and 8.3"
+    },
+    {
+      "id": "state_released",
+      "kind": "state",
+      "state": "released",
+      "terminal": true,
+      "slot_active": null,
+      "display_state": "cancelled",
+      "ledger_status": "rejected",
+      "balance": "released",
+      "source": "sections 8.1 and 8.3"
+    },
+    {
+      "id": "T1",
+      "kind": "transition",
+      "transition": "T1",
+      "from": null,
+      "to": "reserved",
+      "actor": "intake",
+      "guards": [
+        "verified_submit_committed"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T2",
+      "kind": "transition",
+      "transition": "T2",
+      "from": "reserved",
+      "to": "sending",
+      "actor": "sender",
+      "guards": [
+        "next_attempt_due",
+        "no_live_lease",
+        "brakes_open",
+        "latch_clear",
+        "config_complete"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T3",
+      "kind": "transition",
+      "transition": "T3",
+      "from": "sending",
+      "to": "reserved",
+      "actor": "sender",
+      "guards": [
+        "send_time_hold",
+        "no_attempt_persisted_in_lease"
+      ],
+      "reasons": [
+        "program_paused",
+        "day_cap",
+        "vault_low",
+        "fee_payer_low",
+        "settlements_paused",
+        "rpc_error",
+        "config_mismatch"
+      ],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T4",
+      "kind": "transition",
+      "transition": "T4",
+      "from": "sending",
+      "to": "submitted",
+      "actor": "sender",
+      "guards": [
+        "lease_owner_matches",
+        "lease_unexpired",
+        "attempt_pushed_in_same_cas",
+        "write_majority_journaled"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T5",
+      "kind": "transition",
+      "transition": "T5",
+      "from": "sending",
+      "to": "submitted",
+      "actor": "sender",
+      "guards": [
+        "receipt_exists_at_confirmed_or_simulation_already_claimed"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T6",
+      "kind": "transition",
+      "transition": "T6",
+      "from": "sending",
+      "to": "needs_review",
+      "actor": "sender",
+      "guards": [
+        "send_time_check_needs_human"
+      ],
+      "reasons": [
+        "account_blocked",
+        "allowlist_removed",
+        "consent_invalid",
+        "attempts_exhausted",
+        "simulation_rejected",
+        "deployment_mismatch"
+      ],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T7",
+      "kind": "transition",
+      "transition": "T7",
+      "from": "sending",
+      "to": "submitted",
+      "actor": "reconciler",
+      "guards": [
+        "lease_expired",
+        "live_attempt_present"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T8",
+      "kind": "transition",
+      "transition": "T8",
+      "from": "sending",
+      "to": "reserved",
+      "actor": "reconciler",
+      "guards": [
+        "lease_expired",
+        "no_live_attempt"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T9",
+      "kind": "transition",
+      "transition": "T9",
+      "from": "submitted",
+      "to": "finalized",
+      "actor": "reconciler",
+      "guards": [
+        "receipt_finalized_tuple_match"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T10",
+      "kind": "transition",
+      "transition": "T10",
+      "from": "submitted",
+      "to": "reserved",
+      "actor": "reconciler",
+      "guards": [
+        "no_receipt",
+        "receipt_seen_at_unset",
+        "has_attempt",
+        "every_attempt_dead",
+        "attempts_below_limit"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T11",
+      "kind": "transition",
+      "transition": "T11",
+      "from": "submitted",
+      "to": "needs_review",
+      "actor": "reconciler",
+      "guards": [
+        "review_condition"
+      ],
+      "reasons": [
+        "attempts_exhausted",
+        "receipt_mismatch",
+        "inconsistent_rpc",
+        "deployment_mismatch"
+      ],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T12_reserved_to_finalized",
+      "kind": "transition",
+      "transition": "T12",
+      "from": "reserved",
+      "to": "finalized",
+      "actor": "reconciler_or_watcher",
+      "guards": [
+        "receipt_finalized_tuple_match"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T12_sending_to_finalized",
+      "kind": "transition",
+      "transition": "T12",
+      "from": "sending",
+      "to": "finalized",
+      "actor": "reconciler_or_watcher",
+      "guards": [
+        "receipt_finalized_tuple_match"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T12_needs_review_to_finalized",
+      "kind": "transition",
+      "transition": "T12",
+      "from": "needs_review",
+      "to": "finalized",
+      "actor": "reconciler_or_watcher",
+      "guards": [
+        "receipt_finalized_tuple_match"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_reserved_to_finalized",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "reserved",
+      "to": "finalized",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_reserved_to_reserved",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "reserved",
+      "to": "reserved",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_reserved_to_needs_review",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "reserved",
+      "to": "needs_review",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_sending_to_finalized",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "sending",
+      "to": "finalized",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_sending_to_reserved",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "sending",
+      "to": "reserved",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_sending_to_needs_review",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "sending",
+      "to": "needs_review",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_submitted_to_finalized",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "submitted",
+      "to": "finalized",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_submitted_to_reserved",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "submitted",
+      "to": "reserved",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_submitted_to_needs_review",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "submitted",
+      "to": "needs_review",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T13_needs_review_to_finalized",
+      "kind": "transition",
+      "transition": "T13",
+      "from": "needs_review",
+      "to": "finalized",
+      "actor": "admin_reverify",
+      "guards": [
+        "no_live_lease",
+        "reconciler_read_path_once",
+        "from_needs_review_only_to_finalized"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T14",
+      "kind": "transition",
+      "transition": "T14",
+      "from": "needs_review",
+      "to": "reserved",
+      "actor": "admin_retry",
+      "guards": [
+        "review_reason_retryable",
+        "acknowledged_payout_id_equal",
+        "settlements_on",
+        "latch_clear",
+        "every_attempt_dead"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T15_reserved_to_released",
+      "kind": "transition",
+      "transition": "T15",
+      "from": "reserved",
+      "to": "released",
+      "actor": "admin_cancel",
+      "guards": [
+        "devnet_only",
+        "no_live_lease",
+        "every_attempt_dead_if_submitted",
+        "release_proof_passes",
+        "acknowledged_tuple_equal",
+        "latch_clear",
+        "cas_bound_to_assessed_attempts"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T15_needs_review_to_released",
+      "kind": "transition",
+      "transition": "T15",
+      "from": "needs_review",
+      "to": "released",
+      "actor": "admin_cancel",
+      "guards": [
+        "devnet_only",
+        "no_live_lease",
+        "every_attempt_dead_if_submitted",
+        "release_proof_passes",
+        "acknowledged_tuple_equal",
+        "latch_clear",
+        "cas_bound_to_assessed_attempts"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "T15_submitted_to_released",
+      "kind": "transition",
+      "transition": "T15",
+      "from": "submitted",
+      "to": "released",
+      "actor": "admin_cancel",
+      "guards": [
+        "devnet_only",
+        "no_live_lease",
+        "every_attempt_dead_if_submitted",
+        "release_proof_passes",
+        "acknowledged_tuple_equal",
+        "latch_clear",
+        "cas_bound_to_assessed_attempts"
+      ],
+      "reasons": [],
+      "allowed": true,
+      "source": "section 8.2"
+    },
+    {
+      "id": "refused_none_to_sending",
+      "kind": "transition",
+      "transition": null,
+      "from": null,
+      "to": "sending",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_none_to_submitted",
+      "kind": "transition",
+      "transition": null,
+      "from": null,
+      "to": "submitted",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_none_to_needs_review",
+      "kind": "transition",
+      "transition": null,
+      "from": null,
+      "to": "needs_review",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_none_to_finalized",
+      "kind": "transition",
+      "transition": null,
+      "from": null,
+      "to": "finalized",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_none_to_released",
+      "kind": "transition",
+      "transition": null,
+      "from": null,
+      "to": "released",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_reserved_to_submitted",
+      "kind": "transition",
+      "transition": null,
+      "from": "reserved",
+      "to": "submitted",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_sending_to_sending",
+      "kind": "transition",
+      "transition": null,
+      "from": "sending",
+      "to": "sending",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_sending_to_released",
+      "kind": "transition",
+      "transition": null,
+      "from": "sending",
+      "to": "released",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_submitted_to_sending",
+      "kind": "transition",
+      "transition": null,
+      "from": "submitted",
+      "to": "sending",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_submitted_to_submitted",
+      "kind": "transition",
+      "transition": null,
+      "from": "submitted",
+      "to": "submitted",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_needs_review_to_sending",
+      "kind": "transition",
+      "transition": null,
+      "from": "needs_review",
+      "to": "sending",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_needs_review_to_submitted",
+      "kind": "transition",
+      "transition": null,
+      "from": "needs_review",
+      "to": "submitted",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_needs_review_to_needs_review",
+      "kind": "transition",
+      "transition": null,
+      "from": "needs_review",
+      "to": "needs_review",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_finalized_to_reserved",
+      "kind": "transition",
+      "transition": null,
+      "from": "finalized",
+      "to": "reserved",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_finalized_to_sending",
+      "kind": "transition",
+      "transition": null,
+      "from": "finalized",
+      "to": "sending",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_finalized_to_submitted",
+      "kind": "transition",
+      "transition": null,
+      "from": "finalized",
+      "to": "submitted",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_finalized_to_needs_review",
+      "kind": "transition",
+      "transition": null,
+      "from": "finalized",
+      "to": "needs_review",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_finalized_to_finalized",
+      "kind": "transition",
+      "transition": null,
+      "from": "finalized",
+      "to": "finalized",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_finalized_to_released",
+      "kind": "transition",
+      "transition": null,
+      "from": "finalized",
+      "to": "released",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_released_to_reserved",
+      "kind": "transition",
+      "transition": null,
+      "from": "released",
+      "to": "reserved",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_released_to_sending",
+      "kind": "transition",
+      "transition": null,
+      "from": "released",
+      "to": "sending",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_released_to_submitted",
+      "kind": "transition",
+      "transition": null,
+      "from": "released",
+      "to": "submitted",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_released_to_needs_review",
+      "kind": "transition",
+      "transition": null,
+      "from": "released",
+      "to": "needs_review",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_released_to_finalized",
+      "kind": "transition",
+      "transition": null,
+      "from": "released",
+      "to": "finalized",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    },
+    {
+      "id": "refused_released_to_released",
+      "kind": "transition",
+      "transition": null,
+      "from": "released",
+      "to": "released",
+      "actor": null,
+      "guards": [],
+      "reasons": [],
+      "allowed": false,
+      "source": "section 8 (a transition not in the table is a bug and is refused)"
+    }
+  ]
+}

@@ -1,0 +1,1372 @@
+{
+  "contract": "v0",
+  "file": "errors.json",
+  "vectors": [
+    {
+      "id": "program_6000",
+      "kind": "program",
+      "code": 6000,
+      "name": "Paused",
+      "message": "Vault is paused",
+      "raised_by": [
+        "claim C1"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6000
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": "program_paused",
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6001",
+      "kind": "program",
+      "code": 6001,
+      "name": "InvalidClaimAuthority",
+      "message": "Signer is not the vault claim authority",
+      "raised_by": [
+        "claim C2"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6001
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.5 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "program_6002",
+      "kind": "program",
+      "code": 6002,
+      "name": "NotAdmin",
+      "message": "Signer is not the vault admin",
+      "raised_by": [
+        "unpause U1",
+        "update_config G1",
+        "propose_admin A1",
+        "withdraw W1"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6002
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6003",
+      "kind": "program",
+      "code": 6003,
+      "name": "NotAdminOrGuardian",
+      "message": "Signer is neither the vault admin nor the guardian",
+      "raised_by": [
+        "pause P1"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6003
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6004",
+      "kind": "program",
+      "code": 6004,
+      "name": "NotPendingAdmin",
+      "message": "Signer is not the pending admin",
+      "raised_by": [
+        "accept_admin B1"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6004
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6005",
+      "kind": "program",
+      "code": 6005,
+      "name": "NotUpgradeAuthority",
+      "message": "Signer is not the program upgrade authority",
+      "raised_by": [
+        "initialize I2"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6005
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.5 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "program_6006",
+      "kind": "program",
+      "code": 6006,
+      "name": "InvalidProgramData",
+      "message": "Account is not this program's ProgramData account",
+      "raised_by": [
+        "initialize I1"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6006
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6007",
+      "kind": "program",
+      "code": 6007,
+      "name": "InvalidRole",
+      "message": "Role must not be the default public key",
+      "raised_by": [
+        "initialize I5",
+        "update_config G2"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6007
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6008",
+      "kind": "program",
+      "code": 6008,
+      "name": "ZeroPayoutId",
+      "message": "Payout id must not be all zero bytes",
+      "raised_by": [
+        "claim C6"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6008
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6009",
+      "kind": "program",
+      "code": 6009,
+      "name": "ZeroAmount",
+      "message": "Amount must be greater than zero",
+      "raised_by": [
+        "claim C7",
+        "withdraw W4"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6009
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6010",
+      "kind": "program",
+      "code": 6010,
+      "name": "ExceedsMaxPerClaim",
+      "message": "Amount exceeds the per-claim cap",
+      "raised_by": [
+        "claim C8"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6010
+      },
+      "logs": null,
+      "class": "needs_review",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6011",
+      "kind": "program",
+      "code": 6011,
+      "name": "DayCapExceeded",
+      "message": "Claim would exceed the daily cap",
+      "raised_by": [
+        "claim C10"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6011
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": "day_cap",
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6012",
+      "kind": "program",
+      "code": 6012,
+      "name": "Expired",
+      "message": "Claim has expired",
+      "raised_by": [
+        "claim C11"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6012
+      },
+      "logs": null,
+      "class": "retry",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6013",
+      "kind": "program",
+      "code": 6013,
+      "name": "ExpiryTooFar",
+      "message": "Claim expiry is more than 900 seconds ahead",
+      "raised_by": [
+        "claim C12"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6013
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6014",
+      "kind": "program",
+      "code": 6014,
+      "name": "VaultTokenAccountFrozen",
+      "message": "Vault token account is frozen",
+      "raised_by": [
+        "claim C13",
+        "withdraw W6"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6014
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5 (hold + CRITICAL + halt latch); hold reason unnamed, see the v0.1 changelog"
+    },
+    {
+      "id": "program_6015",
+      "kind": "program",
+      "code": 6015,
+      "name": "RecipientTokenAccountFrozen",
+      "message": "Recipient token account is frozen",
+      "raised_by": [
+        "claim C14"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6015
+      },
+      "logs": null,
+      "class": "needs_review",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6016",
+      "kind": "program",
+      "code": 6016,
+      "name": "InsufficientVaultBalance",
+      "message": "Vault balance is below the amount",
+      "raised_by": [
+        "claim C15",
+        "withdraw W7"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6016
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": "vault_low",
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6017",
+      "kind": "program",
+      "code": 6017,
+      "name": "InvalidRecipient",
+      "message": "Recipient must not be the vault, the claim authority or the payer",
+      "raised_by": [
+        "claim C5"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6017
+      },
+      "logs": null,
+      "class": "needs_review",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6018",
+      "kind": "program",
+      "code": 6018,
+      "name": "InvalidVaultTokenAccount",
+      "message": "Vault token account is not canonical or has a delegate or close authority",
+      "raised_by": [
+        "initialize I4",
+        "claim C4",
+        "withdraw W3"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6018
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.5 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "program_6019",
+      "kind": "program",
+      "code": 6019,
+      "name": "InvalidMint",
+      "message": "Mint is not the vault mint or does not have 6 decimals",
+      "raised_by": [
+        "initialize I3",
+        "claim C3",
+        "withdraw W2"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6019
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.5 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "program_6020",
+      "kind": "program",
+      "code": 6020,
+      "name": "RoleConflict",
+      "message": "Claim authority must not also be the admin or the guardian",
+      "raised_by": [
+        "initialize I6",
+        "update_config G3",
+        "propose_admin A2",
+        "accept_admin B2"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6020
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6021",
+      "kind": "program",
+      "code": 6021,
+      "name": "InvalidCaps",
+      "message": "Caps must be non-zero and max_per_claim must not exceed max_per_day",
+      "raised_by": [
+        "initialize I7",
+        "update_config G4"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6021
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6022",
+      "kind": "program",
+      "code": 6022,
+      "name": "InvalidWithdrawDestination",
+      "message": "Withdraw destination must be an unfrozen vault-mint token account owned by the admin",
+      "raised_by": [
+        "withdraw W5"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6022
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "program_6023",
+      "kind": "program",
+      "code": 6023,
+      "name": "MathOverflow",
+      "message": "Arithmetic overflow",
+      "raised_by": [
+        "claim C9",
+        "claim C12",
+        "claim effects",
+        "withdraw W8"
+      ],
+      "where": null,
+      "instruction": null,
+      "error": {
+        "custom": 6023
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.5"
+    },
+    {
+      "id": "anchor_100",
+      "kind": "anchor",
+      "code": 100,
+      "name": "InstructionMissing",
+      "message": null,
+      "raised_by": null,
+      "where": "data shorter than 8 bytes",
+      "instruction": null,
+      "error": {
+        "custom": 100
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6 (v0 text; see the v0.1 changelog: Anchor 1.2.0 returns 101 for data shorter than 8 bytes)"
+    },
+    {
+      "id": "anchor_101",
+      "kind": "anchor",
+      "code": 101,
+      "name": "InstructionFallbackNotFound",
+      "message": null,
+      "raised_by": null,
+      "where": "unknown discriminator: wrong program at the address, stub or older build",
+      "instruction": null,
+      "error": {
+        "custom": 101
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_102",
+      "kind": "anchor",
+      "code": 102,
+      "name": "InstructionDidNotDeserialize",
+      "message": null,
+      "raised_by": null,
+      "where": "args malformed",
+      "instruction": null,
+      "error": {
+        "custom": 102
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2000",
+      "kind": "anchor",
+      "code": 2000,
+      "name": "ConstraintMut",
+      "message": null,
+      "raised_by": null,
+      "where": "writable flag missing",
+      "instruction": null,
+      "error": {
+        "custom": 2000
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2006",
+      "kind": "anchor",
+      "code": 2006,
+      "name": "ConstraintSeeds",
+      "message": null,
+      "raised_by": null,
+      "where": "vault or receipt address not the canonical PDA (wrong program id or mint in derivation)",
+      "instruction": null,
+      "error": {
+        "custom": 2006
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2009",
+      "kind": "anchor",
+      "code": 2009,
+      "name": "ConstraintAssociated",
+      "message": null,
+      "raised_by": null,
+      "where": "recipient or vault token account is not the canonical ATA",
+      "instruction": null,
+      "error": {
+        "custom": 2009
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2015",
+      "kind": "anchor",
+      "code": 2015,
+      "name": "ConstraintTokenOwner",
+      "message": null,
+      "raised_by": null,
+      "where": "claim: the recipient token account passed is not owned by recipient (a re-owned canonical ATA fails earlier at the ATA index); initialize: vault ATA not owned by the vault",
+      "instruction": null,
+      "error": {
+        "custom": 2015
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2023",
+      "kind": "anchor",
+      "code": 2023,
+      "name": "ConstraintAssociatedTokenTokenProgram",
+      "message": null,
+      "raised_by": null,
+      "where": "ATA not under classic Token",
+      "instruction": null,
+      "error": {
+        "custom": 2023
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2040",
+      "kind": "anchor",
+      "code": 2040,
+      "name": "ConstraintDuplicateMutableAccount",
+      "message": null,
+      "raised_by": null,
+      "where": "the same account passed twice as mutable (for example destination = vault token account)",
+      "instruction": null,
+      "error": {
+        "custom": 2040
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2500",
+      "kind": "anchor",
+      "code": 2500,
+      "name": "RequireViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2500
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2501",
+      "kind": "anchor",
+      "code": 2501,
+      "name": "RequireEqViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2501
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2502",
+      "kind": "anchor",
+      "code": 2502,
+      "name": "RequireKeysEqViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2502
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2503",
+      "kind": "anchor",
+      "code": 2503,
+      "name": "RequireNeqViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2503
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2504",
+      "kind": "anchor",
+      "code": 2504,
+      "name": "RequireKeysNeqViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2504
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2505",
+      "kind": "anchor",
+      "code": 2505,
+      "name": "RequireGtViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2505
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_2506",
+      "kind": "anchor",
+      "code": 2506,
+      "name": "RequireGteViolated",
+      "message": null,
+      "raised_by": null,
+      "where": "Require*: not used (the program uses custom codes)",
+      "instruction": null,
+      "error": {
+        "custom": 2506
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3001",
+      "kind": "anchor",
+      "code": 3001,
+      "name": "AccountDiscriminatorNotFound",
+      "message": null,
+      "raised_by": null,
+      "where": "vault address holds something else; layout or program-id mismatch",
+      "instruction": null,
+      "error": {
+        "custom": 3001
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_3002",
+      "kind": "anchor",
+      "code": 3002,
+      "name": "AccountDiscriminatorMismatch",
+      "message": null,
+      "raised_by": null,
+      "where": "vault address holds something else; layout or program-id mismatch",
+      "instruction": null,
+      "error": {
+        "custom": 3002
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_3003",
+      "kind": "anchor",
+      "code": 3003,
+      "name": "AccountDidNotDeserialize",
+      "message": null,
+      "raised_by": null,
+      "where": "vault address holds something else; layout or program-id mismatch",
+      "instruction": null,
+      "error": {
+        "custom": 3003
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_3005",
+      "kind": "anchor",
+      "code": 3005,
+      "name": "AccountNotEnoughKeys",
+      "message": null,
+      "raised_by": null,
+      "where": "account list too short",
+      "instruction": null,
+      "error": {
+        "custom": 3005
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3007",
+      "kind": "anchor",
+      "code": 3007,
+      "name": "AccountOwnedByWrongProgram",
+      "message": null,
+      "raised_by": null,
+      "where": "Token-2022 mint or token account, or a vault from another program",
+      "instruction": null,
+      "error": {
+        "custom": 3007
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_3008",
+      "kind": "anchor",
+      "code": 3008,
+      "name": "InvalidProgramId",
+      "message": null,
+      "raised_by": null,
+      "where": "wrong token or system program passed",
+      "instruction": null,
+      "error": {
+        "custom": 3008
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3009",
+      "kind": "anchor",
+      "code": 3009,
+      "name": "InvalidProgramExecutable",
+      "message": null,
+      "raised_by": null,
+      "where": "program account not executable",
+      "instruction": null,
+      "error": {
+        "custom": 3009
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3010",
+      "kind": "anchor",
+      "code": 3010,
+      "name": "AccountNotSigner",
+      "message": null,
+      "raised_by": null,
+      "where": "claim_authority, payer or admin did not sign",
+      "instruction": null,
+      "error": {
+        "custom": 3010
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3011",
+      "kind": "anchor",
+      "code": 3011,
+      "name": "AccountNotSystemOwned",
+      "message": null,
+      "raised_by": null,
+      "where": "recipient is owned by a program (not a wallet)",
+      "instruction": null,
+      "error": {
+        "custom": 3011
+      },
+      "logs": null,
+      "class": "needs_review",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3012",
+      "kind": "anchor",
+      "code": 3012,
+      "name": "AccountNotInitialized",
+      "message": null,
+      "raised_by": null,
+      "where": "recipient ATA missing (or vault not initialized); config for the rail and for the SDK claim-tx builder, which always sends createAssociatedTokenIdempotent",
+      "instruction": null,
+      "error": {
+        "custom": 3012
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_3013",
+      "kind": "anchor",
+      "code": 3013,
+      "name": "AccountNotProgramData",
+      "message": null,
+      "raised_by": null,
+      "where": "initialize given a non-ProgramData account",
+      "instruction": null,
+      "error": {
+        "custom": 3013
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_3014",
+      "kind": "anchor",
+      "code": 3014,
+      "name": "AccountNotAssociatedTokenAccount",
+      "message": null,
+      "raised_by": null,
+      "where": "not expected with these constraints",
+      "instruction": null,
+      "error": {
+        "custom": 3014
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "anchor_4100",
+      "kind": "anchor",
+      "code": 4100,
+      "name": "DeclaredProgramIdMismatch",
+      "message": null,
+      "raised_by": null,
+      "where": "the deployed binary was built for another program id (wrong cargo feature)",
+      "instruction": null,
+      "error": {
+        "custom": 4100
+      },
+      "logs": null,
+      "class": "config",
+      "hold_reason": "config_mismatch",
+      "halt_latch": true,
+      "source": "sections 3.6 and 9.1 (config: T3 hold config_mismatch)"
+    },
+    {
+      "id": "anchor_4101",
+      "kind": "anchor",
+      "code": 4101,
+      "name": "TryingToInitPayerAsProgramAccount",
+      "message": null,
+      "raised_by": null,
+      "where": "payer equals an init account",
+      "instruction": null,
+      "error": {
+        "custom": 4101
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.6"
+    },
+    {
+      "id": "claim_custom_0_already_in_use",
+      "kind": "instruction_index",
+      "code": 0,
+      "name": "AccountAlreadyInUse",
+      "message": null,
+      "raised_by": null,
+      "where": "receipt for this payout_id already exists",
+      "instruction": "claim",
+      "error": {
+        "custom": 0
+      },
+      "logs": [
+        "Create Account: account Address { address: 3abi6WfgCceNoMX3Gq5HcqhBePA6T6oNuy7ahhWUQNJR, base: None } already in use"
+      ],
+      "class": "already_claimed",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.7"
+    },
+    {
+      "id": "claim_custom_0_logs_truncated",
+      "kind": "instruction_index",
+      "code": 0,
+      "name": "AccountAlreadyInUse",
+      "message": null,
+      "raised_by": null,
+      "where": "Custom(0) at the claim index alone still routes to receipt verification",
+      "instruction": "claim",
+      "error": {
+        "custom": 0
+      },
+      "logs": null,
+      "class": "already_claimed",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.7"
+    },
+    {
+      "id": "claim_custom_1_insufficient_lamports",
+      "kind": "instruction_index",
+      "code": 1,
+      "name": "ResultWithNegativeLamports",
+      "message": null,
+      "raised_by": null,
+      "where": "payer cannot fund the receipt rent",
+      "instruction": "claim",
+      "error": {
+        "custom": 1
+      },
+      "logs": [
+        "Transfer: insufficient lamports 1000, need 1102360"
+      ],
+      "class": "hold",
+      "hold_reason": "fee_payer_low",
+      "halt_latch": false,
+      "source": "sections 3.7 and 9.1"
+    },
+    {
+      "id": "claim_custom_1_without_log",
+      "kind": "instruction_index",
+      "code": 1,
+      "name": null,
+      "message": null,
+      "raised_by": null,
+      "where": "Custom(1) without the insufficient-lamports log falls to the any-other row",
+      "instruction": "claim",
+      "error": {
+        "custom": 1
+      },
+      "logs": [],
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7 (made explicit in the v0.1 changelog)"
+    },
+    {
+      "id": "claim_custom_4_spl_token",
+      "kind": "instruction_index",
+      "code": 4,
+      "name": null,
+      "message": null,
+      "raised_by": null,
+      "where": "any other Custom(n) with n < 6000 not in 3.6 (here SPL Token OwnerMismatch from transfer_checked)",
+      "instruction": "claim",
+      "error": {
+        "custom": 4
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7"
+    },
+    {
+      "id": "claim_named_unlisted",
+      "kind": "instruction_index",
+      "code": null,
+      "name": "InvalidAccountData",
+      "message": null,
+      "raised_by": null,
+      "where": "a named (non-Custom) error at the claim index, not listed in 3.7",
+      "instruction": "claim",
+      "error": {
+        "name": "InvalidAccountData"
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7 (made explicit in the v0.1 changelog)"
+    },
+    {
+      "id": "initialize_custom_0_already_in_use",
+      "kind": "instruction_index",
+      "code": 0,
+      "name": "AccountAlreadyInUse",
+      "message": null,
+      "raised_by": null,
+      "where": "vault for this mint already exists",
+      "instruction": "initialize",
+      "error": {
+        "custom": 0
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7"
+    },
+    {
+      "id": "ata_custom_0_invalid_owner",
+      "kind": "instruction_index",
+      "code": 0,
+      "name": "InvalidOwner",
+      "message": null,
+      "raised_by": null,
+      "where": "the recipient's ATA exists but was re-owned",
+      "instruction": "create_associated_token_idempotent",
+      "error": {
+        "custom": 0
+      },
+      "logs": null,
+      "class": "needs_review",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.7"
+    },
+    {
+      "id": "ata_illegal_owner",
+      "kind": "instruction_index",
+      "code": null,
+      "name": "IllegalOwner",
+      "message": null,
+      "raised_by": null,
+      "where": "the recipient's ATA exists but was re-owned",
+      "instruction": "create_associated_token_idempotent",
+      "error": {
+        "name": "IllegalOwner"
+      },
+      "logs": null,
+      "class": "needs_review",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 3.7"
+    },
+    {
+      "id": "ata_custom_1_insufficient_lamports",
+      "kind": "instruction_index",
+      "code": 1,
+      "name": "ResultWithNegativeLamports",
+      "message": null,
+      "raised_by": null,
+      "where": "payer cannot fund ATA rent",
+      "instruction": "create_associated_token_idempotent",
+      "error": {
+        "custom": 1
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": "fee_payer_low",
+      "halt_latch": false,
+      "source": "sections 3.7 and 9.1"
+    },
+    {
+      "id": "ata_custom_2_unlisted",
+      "kind": "instruction_index",
+      "code": 2,
+      "name": null,
+      "message": null,
+      "raised_by": null,
+      "where": "an ATA-index error not listed in 3.7",
+      "instruction": "create_associated_token_idempotent",
+      "error": {
+        "custom": 2
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7 (made explicit in the v0.1 changelog)"
+    },
+    {
+      "id": "ata_named_unlisted",
+      "kind": "instruction_index",
+      "code": null,
+      "name": "InvalidAccountData",
+      "message": null,
+      "raised_by": null,
+      "where": "an ATA-index error not listed in 3.7",
+      "instruction": "create_associated_token_idempotent",
+      "error": {
+        "name": "InvalidAccountData"
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7 (made explicit in the v0.1 changelog)"
+    },
+    {
+      "id": "compute_budget_any",
+      "kind": "instruction_index",
+      "code": null,
+      "name": "InvalidInstructionData",
+      "message": null,
+      "raised_by": null,
+      "where": "malformed budget instruction",
+      "instruction": "compute_budget",
+      "error": {
+        "name": "InvalidInstructionData"
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 3.7"
+    },
+    {
+      "id": "transaction_BlockhashNotFound",
+      "kind": "transaction",
+      "code": null,
+      "name": "BlockhashNotFound",
+      "message": null,
+      "raised_by": null,
+      "where": "transaction-level error without an instruction index",
+      "instruction": null,
+      "error": {
+        "name": "BlockhashNotFound"
+      },
+      "logs": null,
+      "class": "retry",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 9.1 (referenced by section 3.7)"
+    },
+    {
+      "id": "transaction_AccountInUse",
+      "kind": "transaction",
+      "code": null,
+      "name": "AccountInUse",
+      "message": null,
+      "raised_by": null,
+      "where": "transaction-level error without an instruction index",
+      "instruction": null,
+      "error": {
+        "name": "AccountInUse"
+      },
+      "logs": null,
+      "class": "retry",
+      "hold_reason": null,
+      "halt_latch": false,
+      "source": "section 9.1 (referenced by section 3.7)"
+    },
+    {
+      "id": "transaction_InsufficientFundsForFee",
+      "kind": "transaction",
+      "code": null,
+      "name": "InsufficientFundsForFee",
+      "message": null,
+      "raised_by": null,
+      "where": "transaction-level error without an instruction index",
+      "instruction": null,
+      "error": {
+        "name": "InsufficientFundsForFee"
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": "fee_payer_low",
+      "halt_latch": false,
+      "source": "section 9.1 (referenced by section 3.7)"
+    },
+    {
+      "id": "transaction_InsufficientFundsForRent",
+      "kind": "transaction",
+      "code": null,
+      "name": "InsufficientFundsForRent",
+      "message": null,
+      "raised_by": null,
+      "where": "transaction-level error without an instruction index",
+      "instruction": null,
+      "error": {
+        "name": "InsufficientFundsForRent"
+      },
+      "logs": null,
+      "class": "hold",
+      "hold_reason": "fee_payer_low",
+      "halt_latch": false,
+      "source": "section 9.1 (referenced by section 3.7)"
+    },
+    {
+      "id": "transaction_AccountNotFound",
+      "kind": "transaction",
+      "code": null,
+      "name": "AccountNotFound",
+      "message": null,
+      "raised_by": null,
+      "where": "transaction-level error without an instruction index",
+      "instruction": null,
+      "error": {
+        "name": "AccountNotFound"
+      },
+      "logs": null,
+      "class": "bug",
+      "hold_reason": null,
+      "halt_latch": true,
+      "source": "section 9.1 (referenced by section 3.7)"
+    }
+  ]
+}

@@ -71,6 +71,15 @@ describe("program error table (contract section 3.5)", () => {
     expect(classifyProgramErrorCode(6014).holdReason).toBeUndefined();
   });
 
+  it("holds every config-class error with config_mismatch (section 9.1)", () => {
+    for (const code of [6001, 6005, 6018, 6019, 101, 3001, 3002, 3003, 3007, 3012, 4100]) {
+      expect(classifyProgramErrorCode(code), String(code)).toMatchObject({ class: "config", holdReason: "config_mismatch" });
+    }
+    for (const code of [6002, 6010, 6012, 100, 3011]) {
+      expect(classifyProgramErrorCode(code).holdReason, String(code)).toBeUndefined();
+    }
+  });
+
   it("an unknown program code (appended after v0) is bug", () => {
     expect(classifyProgramErrorCode(6024)).toMatchObject({ class: "bug", haltLatch: true, critical: true });
   });
