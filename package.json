@@ -12,6 +12,7 @@
     "check:fixtures": "node scripts/contract/gen-fixtures.mjs --check",
     "check:workflows": "node scripts/check-workflows.ts",
     "codama": "node scripts/codama.ts idl/gogocash_cashback.devnet.json",
+    "demo": "node scripts/demo.ts",
     "gen:fixtures": "node scripts/contract/gen-fixtures.mjs",
     "keygen": "node scripts/keygen.ts",
     "test": "vitest run",
