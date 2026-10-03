@@ -2,7 +2,8 @@
 node_modules
 dist/
 coverage/
-# Throwaway devnet keypairs created by `npm run demo`. Never commit keys.
+# The old transfer-based demo wrote throwaway keypairs here. The current
+# `npm run demo` writes no key file; the directory stays ignored. Never commit keys.
 .demo/
 .env
 .env.*

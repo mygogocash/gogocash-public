@@ -17,6 +17,9 @@ vault, records the deployment and funds the vault.
   `release/manifest.json` as an artifact. Commit that artifact.
 - Fund the vault with `npm run admin -- deposit` after the Circle faucet.
   Never send to the vault from a wallet UI.
+- Once the demo-mint vault is open, funded and unpaused, `npm run demo` runs
+  the R5 drills against it and writes `evidence/devnet-demo-<date>.md`
+  (section 10). It never touches the USDC vault.
 - No key value ever appears in this document, a command argument, chat, an
   issue or a commit. Placeholders such as `<DEPLOYER_PUBKEY>` stand for
   public keys you read from `npm run keygen` output.
@@ -78,7 +81,7 @@ done
 | `deployer.json` | Fee payer and loader-v3 upgrade authority (`<DEPLOYER_PUBKEY>`). Signs `initialize`. | `DEVNET_DEPLOYER_KEYPAIR` in the `devnet` environment; local file deleted in step 3 |
 | `admin.json` | Vault admin (`<ADMIN_PUBKEY>`): unpause, update_config, withdraw, admin handover. Also the depositor in step 7. | Local, mode 0600 |
 | `guardian.json` | Vault guardian (`<GUARDIAN_PUBKEY>`): pause only. | Local, mode 0600 |
-| `demo-claim-authority.json` | Claim key of the demo vault (deferred, see the last section). | Local, mode 0600 |
+| `demo-claim-authority.json` | Claim key of the demo vault; by default also the fee payer of `npm run demo` (section 10). | Local, mode 0600 |
 | `api-claim-authority.json` | Claim authority of the USDC vault (`<API_CLAIM_PUBKEY>`), used only by the preview API. | Railway preview (step 8); local file deleted after |
 | `api-fee-payer.json` | Fee payer of the preview API's claims (`<API_FEE_PAYER_PUBKEY>`). | Railway preview (step 8); local file deleted after |
 
@@ -291,6 +294,103 @@ mint, recipient, amount and payout id. Exit code 0 means `paid`; anything
 else (`mismatch`, `absent`, `genesis_mismatch`, `transaction_not_found`,
 `not_a_claim`, `stale_read`) exits non-zero.
 
+## 10. Run the demo on the demo-mint vault
+
+Run it right after the deploy workflow has opened the demo vault and you
+have funded it: deploy-devnet (steps 5 and 6) with the `demo` vault
+enabled, then the deposit and unpause below. The demo runs only against the
+demo-mint vault. It refuses `--vault usdc`, any vault on the USDC mint, a
+vault that shares its claim key with another vault, and mainnet, so it never
+touches the vault the API claims from or trips its receipt watcher.
+
+Before the first run:
+
+1. The demo vault is open (see "The demo-mint vault" under Deferred): its
+   `mint`, `admin`, `guardian` and `claimAuthority` (`<DEMO_CLAIM_PUBKEY>`,
+   from `demo-claim-authority.json`) are in `deploy/vaults.devnet.json`, a
+   `v*` tag initialized it, and the committed `deployments/devnet.json` and
+   `release/manifest.json` list it.
+2. Deposit demo tokens, then unpause it. A vault starts paused, and the demo
+   refuses a paused vault (it prints the unpause command):
+
+```sh
+SOLANA_RPC_URL=https://api.devnet.solana.com npm run admin -- deposit --cluster devnet \
+  --vault demo --amount 20000000 --keypair ~/.config/gogocash/devnet/admin.json
+SOLANA_RPC_URL=https://api.devnet.solana.com npm run admin -- unpause --cluster devnet \
+  --vault demo --keypair ~/.config/gogocash/devnet/admin.json
+```
+
+3. Give the fee payer devnet SOL. By default the fee payer is the demo claim
+   key (`--fee-payer <file>` names another key). It pays every fee and rent of
+   the run: its own rent-exempt minimum, the one receipt (never reclaimed),
+   the stand-in wallet's token account, and a 50,000-lamport fee budget. That
+   is about 0.0033 SOL at the 2 Oct 2026 rent, so 0.01 SOL is plenty. The
+   guardian and the admin sign, but pay nothing.
+
+Then run it:
+
+```sh
+SOLANA_RPC_URL=https://api.devnet.solana.com npm run demo -- --cluster devnet --vault demo \
+  --claim-keypair ~/.config/gogocash/devnet/demo-claim-authority.json \
+  --guardian-keypair ~/.config/gogocash/devnet/guardian.json \
+  --admin-keypair ~/.config/gogocash/devnet/admin.json
+```
+
+The steps, in order. Only three transactions are sent: the claim, the pause
+and the unpause. Every refusal check is an unsigned simulation.
+
+| # | Step | Expected |
+| --- | --- | --- |
+| 1 | THB 125.00 to USDC with bigint math (contract section 6.3, rate of the `thb_basic` vector) | 3558875 atomic (3.558875 USDC) |
+| 2 | A throwaway wallet made in memory for the run (never written) signs the section 4 consent bytes; `verifyConsentSignature` checks them | `ok`, and `signature_invalid` for amount + 1 |
+| 3 | The `src/claim-tx.ts` claim (ATA idempotent, then claim) to that wallet, signed by the fee payer and the claim key, waited for at `finalized`, receipt verified (section 3.8) | `paid` |
+| 4 | The same payout_id again | `Custom(0)` "already in use" at the claim index, class `already_claimed` |
+| 5 | The keyless verifier on the claim signature, then with amount + 1 | `paid`, then `mismatch` (amount) |
+| 6 | A claim of `max_per_claim` + 1 | 6010 `ExceedsMaxPerClaim`, class `needs_review` |
+| 7 | The guardian pauses, a claim is tried, the admin unpauses | 6000 `Paused`, class `hold`; the vault ends unpaused |
+
+Before the first transaction the demo checks everything it can read: the
+genesis hash, the program, that the onchain vault matches
+`deployments/devnet.json`, that the key files are the vault's claim
+authority, guardian and admin, the vault token account, today's cap, and the
+funds. Exit codes:
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Every step passed; the evidence file was written. |
+| 1 | A step failed after the run started. Later steps are skipped and the evidence file records the failure (if the file cannot be written, for example because its guard finds a forbidden value, the demo prints why). |
+| 2 | Stopped before anything was sent, with no evidence file: a refusal (wrong key, paused or drifted vault, mainnet, the `usdc` vault, a bad config) or an RPC or setup error while reading the chain. The message says which; fix it or retry. |
+| 3 | The fee payer or the vault lacks funds. Nothing was sent; it prints only the address to fund. |
+
+Step 7 never leaves the vault paused on purpose. Once the pause is signed,
+the demo settles its fate from the signature status, retrying RPC errors
+with backoff, before it decides anything. It unpauses if the pause
+finalized or the vault reads paused at `confirmed`, and it reports "never
+landed" only when the pause failed or its blockhash expired with no status.
+The first Ctrl-C during step 7 lets the unpause finish; a second stops the
+run at once. If step 7 prints "may still be paused" or "fate is unknown",
+or you stopped it with a second Ctrl-C, check the vault and unpause it by
+hand:
+
+```sh
+SOLANA_RPC_URL=https://api.devnet.solana.com npm run admin -- show --cluster devnet --vault demo
+SOLANA_RPC_URL=https://api.devnet.solana.com npm run admin -- unpause --cluster devnet \
+  --vault demo --keypair ~/.config/gogocash/devnet/admin.json
+```
+
+The evidence goes to `evidence/devnet-demo-<date>.md` (UTC date; a second
+run the same day writes `-2`, and so on; nothing is overwritten). It holds
+addresses, signatures, amounts, outcomes and devnet Explorer links. The demo
+refuses to write it if it would contain a key-shaped number array, a
+64-byte base58 value other than the run's own signatures, or the RPC URL.
+Review it and commit it in a pull request:
+
+```sh
+git switch -c chore/devnet-demo-evidence
+git add evidence/devnet-demo-<date>.md
+git commit -m "chore(evidence): devnet demo run of <date>"
+```
+
 ## If something goes wrong
 
 - **The deploy job failed before or during `solana program deploy`.** Fix the
@@ -325,16 +425,16 @@ else (`mismatch`, `absent`, `genesis_mismatch`, `transaction_not_found`,
 
 ## Deferred
 
-- **`npm run demo`** (the devnet demo script of #2983: THB to USDC, consent,
-  claim, replay, mismatch, over-cap and pause drills, evidence file) is not
-  built yet.
 - **Tier B fallback** of #2983 (with the API sender off, `update_config`
   rotates the claim authority to an operator key, the operator settles the
-  same payout_id, then rotates back). `update_config` is ready; the operator
-  claim sender comes with the demo script.
+  same payout_id, then rotates back). `update_config` is ready, and the
+  demo's claim path shows an operator-signed claim, but there is no command
+  that settles a given payout_id on the `usdc` vault (the demo refuses that
+  vault on purpose).
 - **The demo-mint vault.** `deploy/vaults.devnet.json` keeps the `demo`
   entry `enabled: false` with no mint. It needs a classic SPL Token mint with
-  6 decimals, created with the demo script, and its own claim key
+  6 decimals (no script here creates it yet; `npm run demo` does not create
+  mints), demo tokens minted to the admin for the deposit, and its own claim key
   (`demo-claim-authority.json`), so drills never touch the API's vault or
   trip its receipt watcher. To open it later: fill in `mint`, `admin`,
   `guardian` and `claimAuthority`, set `enabled: true`, merge, and push a new

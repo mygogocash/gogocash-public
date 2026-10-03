@@ -77,6 +77,8 @@ ledger marks the payout paid
 | [`src/verify-receipt.ts`](src/verify-receipt.ts) | Receipt verification before a payout is marked paid |
 | [`src/release.ts`](src/release.ts) | The five-condition proof that a stuck payout can never land |
 | [`src/admin/`](src/admin) | Pure builders and checks behind the operator CLI (`npm run admin`) and the keyless verifier (`npm run verify:devnet`) |
+| [`src/demo/`](src/demo) | Pure steps behind the devnet demo: THB to USDC working, consent signing and verify, the funding and state precheck, simulation verdicts, settling the pause drill's transactions before it unpauses, and the evidence file with its no-key-material guard |
+| [`scripts/demo.ts`](scripts/demo.ts) | The devnet demo on the demo-mint vault (`npm run demo`): claim to a finalized `paid` receipt, replay, verifier mismatch, over-cap and pause drills; writes `evidence/devnet-demo-<date>.md` |
 | [`scripts/keygen.ts`](scripts/keygen.ts) | Generates one operator key file (mode 0600, outside git) and prints only its public key |
 | [`.github/workflows/deploy-devnet.yml`](.github/workflows/deploy-devnet.yml) | Deploys the verified build to devnet and opens the vaults ([docs/RUNBOOK-DEVNET.md](docs/RUNBOOK-DEVNET.md)) |
 | [`examples/seeker-wallet.ts`](examples/seeker-wallet.ts) | Example of connecting the member's wallet with Mobile Wallet Adapter (not compiled) |
@@ -95,7 +97,14 @@ npm run typecheck
 node -e "import('./src/index.ts')"   # loads the SDK with no build step
 ```
 
-The earlier end-to-end devnet demo (`npm run demo`) was removed with the old transfer-based payout code. It is being rebuilt on the program.
+The end-to-end devnet demo runs on the program against a separate demo-mint vault, never the USDC vault the API pays from. It needs a deployed program and a funded, unpaused demo vault ([docs/RUNBOOK-DEVNET.md](docs/RUNBOOK-DEVNET.md), section 10):
+
+```bash
+SOLANA_RPC_URL=https://api.devnet.solana.com npm run demo -- --cluster devnet --vault demo \
+  --claim-keypair <demo-claim-authority.json> --guardian-keypair <guardian.json> --admin-keypair <admin.json>
+```
+
+It converts THB 125.00 to USDC with integer math, has a throwaway in-memory wallet sign the consent message, pays one claim and verifies its finalized receipt (`paid`), then shows that a replay, a wrong amount, an over-cap claim and a claim while paused are each refused. It writes the signatures and Explorer links to `evidence/devnet-demo-<date>.md`.
 
 ## Status and scope
 
