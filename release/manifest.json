@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "contract": "v0",
+  "programIds": {
+    "devnet": "HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje",
+    "mainnet": null
+  },
+  "deployments": {
+    "devnet": null,
+    "mainnet": null
+  }
+}

@@ -1,0 +1,405 @@
+# Deploys the gogocash_cashback program to devnet and opens the vaults named
+# in deploy/vaults.devnet.json (plan step R4, mygogocash/gogocash-monorepo#2982).
+# The operator sequence around it is docs/RUNBOOK-DEVNET.md.
+#
+# In order: (1) the verifiable build of this commit runs as a called workflow
+# (build plus the LiteSVM suite) and the deploy job takes its .so by hash;
+# (2) `solana program deploy` (loader-v3, upgradeable), skipped when the
+# program already runs exactly these bytes (a re-run, or a tag that only
+# enables another vault); (3) `solana-verify get-program-hash` must equal the
+# artifact's hash; (4) one transaction per vault,
+# [createAssociatedTokenIdempotent, initialize], signed by the upgrade
+# authority (the deployer); a vault that already exists and matches the
+# config is kept; (5) `solana-verify verify-from-repo --arch v3`;
+# (6) deployments/devnet.json and release/manifest.json as an artifact that
+# the founder reviews and commits. The workflow never pushes.
+#
+# solana-verify 0.5.2's get-program-hash has no --arch option: it hashes the
+# deployed bytes, which do not depend on it. --arch v3 is passed to every
+# build (verifiable-build.yml and verify-from-repo).
+#
+# Hardening rules (the ones in ci.yml, plus the deploy rules that
+# scripts/check-workflows.ts enforces):
+#   - Actions are pinned by full commit SHA; the called workflow by local path.
+#   - Agave and solana-verify downloads are checked against pinned SHA-256s;
+#     nothing is piped from curl into a shell.
+#   - No `${{ }}` expression is expanded inside a `run:` script; values go
+#     through `env:`, and workflow_dispatch has no inputs.
+#   - The two secrets (DEVNET_PROGRAM_KEYPAIR, DEVNET_DEPLOYER_KEYPAIR) appear
+#     only in the env of the one step that writes them to files, after
+#     `umask 077`, and are unset right after. No `set -x`. The program key
+#     file is deleted right after the deploy, the deployer key file right
+#     after initialize, and the key directory in an `if: always()` step that
+#     runs before any upload.
+#   - The deploy buffer key is generated in the run and passed with
+#     --buffer, so a failed deploy never prints a recovery seed phrase; a
+#     failed deploy's buffer is closed with the deployer key.
+#   - Only the deploy job receives secrets, in the `devnet` environment (the
+#     founder is the required reviewer; its deployment rule allows only `v*`
+#     tags), and only on a `v*` tag.
+#   - The token is read-only.
+name: Deploy devnet
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-devnet
+  cancel-in-progress: false
+
+env:
+  # Same pins as program.yml and verifiable-build.yml.
+  AGAVE_VERSION: "4.3.0"
+  AGAVE_SHA256: "c97289a8abb1d0efb497d8b5cb285baabd9b7f8ea6647f5d145c5dc8ff3611e8"
+  SOLANA_VERIFY_VERSION: "0.5.2"
+  SOLANA_VERIFY_SHA256: "b9d5ccce9634dc14269cab3e7a58649bc141b3306e7735a94478c936341f211f"
+  VERIFY_IMAGE: "solanafoundation/solana-verifiable-build@sha256:12fd4c0a0790f0fc41ef74b0cdb6bccc167ba6137eb1adb749bac649481c86bd"
+  LIBRARY_NAME: gogocash_cashback
+  # The public devnet RPC (not a secret). Contract v0 section 2.1.
+  SOLANA_RPC_URL: "https://api.devnet.solana.com"
+  DEVNET_GENESIS_HASH: EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG
+  LOADER_V3: BPFLoaderUpgradeab1e11111111111111111111111
+  PLACEHOLDER_PROGRAM_ID: HWNF2cvXybfAjLbw2pydi7sNFmTfYBjpEWNtY3BJfCje
+
+jobs:
+  verifiable-build:
+    name: verifiable build of this commit
+    # A dispatch from a branch builds nothing and asks for no approval.
+    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    uses: ./.github/workflows/verifiable-build.yml
+    permissions:
+      contents: read
+
+  deploy:
+    name: deploy to devnet and open the vaults
+    needs: verifiable-build
+    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    environment: devnet
+    permissions:
+      contents: read
+    steps:
+      - name: Require a v* tag
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" != "tag" ] || [[ "${GITHUB_REF_NAME}" != v* ]]; then
+            echo "::error::deploy-devnet runs only on a v* tag, got ${GITHUB_REF_TYPE} ${GITHUB_REF_NAME}."
+            exit 1
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "26.5.1"
+      # Before any key exists. --ignore-scripts: no dependency lifecycle script runs.
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check the program id and the vault config (no keys yet)
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/evidence" "${RUNNER_TEMP}/record"
+          program_id="$(jq -r '.programIds.devnet' release/manifest.json)"
+          if [ -z "${program_id}" ] || [ "${program_id}" = "null" ] || [ "${program_id}" = "${PLACEHOLDER_PROGRAM_ID}" ]; then
+            echo "::error file=release/manifest.json::programIds.devnet must be the real program id (not null, not the v0 placeholder)."
+            exit 1
+          fi
+          # The binary checks its own id (4100 DeclaredProgramIdMismatch), so
+          # declare_id! must already be the manifest's id.
+          if ! grep -Fq "declare_id!(\"${program_id}\");" programs/gogocash-cashback/src/lib.rs; then
+            echo "::error file=programs/gogocash-cashback/src/lib.rs::declare_id! is not programIds.devnet ${program_id}."
+            exit 1
+          fi
+          # Validates deploy/vaults.devnet.json (complete roles, key separation,
+          # caps, the USDC mint) and prints the vault PDAs. No RPC, no key.
+          npm run --silent admin -- initialize --cluster devnet --check-only | tee "${RUNNER_TEMP}/evidence/initialize-plan.json"
+          echo "PROGRAM_ID=${program_id}" >> "${GITHUB_ENV}"
+      - name: Install the Agave CLI (pinned, SHA-256 checked)
+        run: |
+          set -euo pipefail
+          cd "${RUNNER_TEMP}"
+          curl -sSfL --retry 3 -o solana-release.tar.bz2 \
+            "https://github.com/anza-xyz/agave/releases/download/v${AGAVE_VERSION}/solana-release-x86_64-unknown-linux-gnu.tar.bz2"
+          echo "${AGAVE_SHA256}  solana-release.tar.bz2" | sha256sum -c -
+          tar -xjf solana-release.tar.bz2
+          rm -f solana-release.tar.bz2
+          echo "${RUNNER_TEMP}/solana-release/bin" >> "${GITHUB_PATH}"
+          "${RUNNER_TEMP}/solana-release/bin/solana" --version
+      - name: Install solana-verify (pinned, SHA-256 checked)
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/solana-verify/bin"
+          cd "${RUNNER_TEMP}/solana-verify/bin"
+          curl -sSfL --retry 3 -o "solana-verify-${SOLANA_VERIFY_VERSION}-linux" \
+            "https://github.com/solana-foundation/solana-verifiable-build/releases/download/v${SOLANA_VERIFY_VERSION}/solana-verify-${SOLANA_VERIFY_VERSION}-linux"
+          echo "${SOLANA_VERIFY_SHA256}  solana-verify-${SOLANA_VERIFY_VERSION}-linux" | sha256sum -c -
+          mv "solana-verify-${SOLANA_VERIFY_VERSION}-linux" solana-verify
+          chmod 0755 solana-verify
+          echo "${RUNNER_TEMP}/solana-verify/bin" >> "${GITHUB_PATH}"
+          "${RUNNER_TEMP}/solana-verify/bin/solana-verify" --version
+      - name: Pull the build image by digest
+        run: |
+          set -euo pipefail
+          docker pull "${VERIFY_IMAGE}"
+          label="$(docker image inspect --format '{{index .Config.Labels "agave.version"}}' "${VERIFY_IMAGE}")"
+          if [ "${label}" != "v4.3.0" ]; then
+            echo "::error::expected the Agave v4.3.0 image, got agave.version='${label}'"
+            exit 1
+          fi
+      - name: Download the verifiable build of this commit
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: gogocash_cashback-verifiable
+          path: ${{ runner.temp }}/verifiable
+      - name: Check the artifact by hash
+        working-directory: ${{ runner.temp }}/verifiable
+        env:
+          EXPECTED_SHA256: ${{ needs.verifiable-build.outputs.sha256 }}
+          EXPECTED_EXECUTABLE_HASH: ${{ needs.verifiable-build.outputs.executable_hash }}
+        run: |
+          set -euo pipefail
+          printf '%s' "${EXPECTED_SHA256}" | grep -Eqx '[0-9a-f]{64}'
+          printf '%s' "${EXPECTED_EXECUTABLE_HASH}" | grep -Eqx '[0-9a-f]{64}'
+          # The bytes the build job hashed, before any host-side third-party code ran.
+          echo "${EXPECTED_SHA256}  ${LIBRARY_NAME}.so" | sha256sum -c -
+          sha256sum -c "${LIBRARY_NAME}.so.sha256"
+          local_hash="$(solana-verify get-executable-hash "${LIBRARY_NAME}.so")"
+          if [ "${local_hash}" != "${EXPECTED_EXECUTABLE_HASH}" ]; then
+            echo "::error::solana-verify hash ${local_hash} is not the build job's ${EXPECTED_EXECUTABLE_HASH}."
+            exit 1
+          fi
+          node "${GITHUB_WORKSPACE}/scripts/check-sbpf.mjs" --expect-security-txt "${LIBRARY_NAME}.so"
+          echo "SO_SHA256=${EXPECTED_SHA256}" >> "${GITHUB_ENV}"
+          echo "PROGRAM_HASH=${EXPECTED_EXECUTABLE_HASH}" >> "${GITHUB_ENV}"
+      - name: Check the RPC is devnet
+        run: |
+          set -euo pipefail
+          genesis="$(solana genesis-hash --url "${SOLANA_RPC_URL}")"
+          if [ "${genesis}" != "${DEVNET_GENESIS_HASH}" ]; then
+            echo "::error::the RPC genesis hash is not devnet's."
+            exit 1
+          fi
+      - name: Write the deploy keys (umask 077)
+        env:
+          DEVNET_PROGRAM_KEYPAIR: ${{ secrets.DEVNET_PROGRAM_KEYPAIR }}
+          DEVNET_DEPLOYER_KEYPAIR: ${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}
+        run: |
+          set -euo pipefail
+          umask 077
+          keys="${RUNNER_TEMP}/keys"
+          mkdir -m 700 "${keys}"
+          if [ -z "${DEVNET_PROGRAM_KEYPAIR}" ] || [ -z "${DEVNET_DEPLOYER_KEYPAIR}" ]; then
+            echo "::error::the devnet environment needs DEVNET_PROGRAM_KEYPAIR and DEVNET_DEPLOYER_KEYPAIR."
+            exit 1
+          fi
+          # printf is a shell builtin: the key never appears in a process argument list.
+          printf '%s' "${DEVNET_PROGRAM_KEYPAIR}" > "${keys}/program.json"
+          printf '%s' "${DEVNET_DEPLOYER_KEYPAIR}" > "${keys}/deployer.json"
+          # No child process below inherits the raw secrets in its environment.
+          unset DEVNET_PROGRAM_KEYPAIR DEVNET_DEPLOYER_KEYPAIR
+          program_pubkey="$(solana-keygen pubkey "${keys}/program.json")"
+          deployer_pubkey="$(solana-keygen pubkey "${keys}/deployer.json")"
+          if [ "${program_pubkey}" != "${PROGRAM_ID}" ]; then
+            echo "::error::DEVNET_PROGRAM_KEYPAIR is ${program_pubkey}, not programIds.devnet ${PROGRAM_ID}."
+            exit 1
+          fi
+          if [ "${deployer_pubkey}" = "${program_pubkey}" ]; then
+            echo "::error::the deployer must not be the program key."
+            exit 1
+          fi
+          echo "DEPLOYER=${deployer_pubkey}" >> "${GITHUB_ENV}"
+          echo "deployer ${deployer_pubkey}"
+          solana balance "${deployer_pubkey}" --url "${SOLANA_RPC_URL}"
+      - name: Deploy (loader-v3, upgradeable)
+        id: deploy
+        run: |
+          set -euo pipefail
+          umask 077
+          keys="${RUNNER_TEMP}/keys"
+          so="${RUNNER_TEMP}/verifiable/${LIBRARY_NAME}.so"
+          echo "${SO_SHA256}  ${so}" | sha256sum -c -
+          # A re-run, or a later tag with the same program bytes (for example
+          # one that only enables another vault), keeps the deployed program
+          # and goes straight to initialize. Anything else deploys or upgrades.
+          deployed_hash="$(solana-verify --url "${SOLANA_RPC_URL}" get-program-hash "${PROGRAM_ID}" 2>/dev/null || true)"
+          if [ "${deployed_hash}" = "${PROGRAM_HASH}" ]; then
+            echo "program ${PROGRAM_ID} already runs the verified bytes ${PROGRAM_HASH}; not redeploying."
+            printf '{"skipped":"the program already runs the verified bytes","programHash":"%s"}\n' "${PROGRAM_HASH}" \
+              > "${RUNNER_TEMP}/evidence/deploy.json"
+          else
+            # The run provides the buffer key. Without --buffer the CLI makes an
+            # ephemeral buffer key and prints its 12-word recovery phrase to
+            # stderr, into this public log (Agave 4.3.0 prints it before every
+            # such deploy, not only a failed one). With a provided buffer
+            # signer it prints nothing (keygen --silent prints only the path),
+            # and a failed deploy's buffer is closed below with the deployer
+            # key, the buffer authority (its SOL goes back).
+            solana-keygen new --no-bip39-passphrase --silent --outfile "${keys}/buffer.json"
+            echo "deploy buffer $(solana-keygen pubkey "${keys}/buffer.json")"
+            solana program deploy "${so}" \
+              --program-id "${keys}/program.json" \
+              --buffer "${keys}/buffer.json" \
+              --upgrade-authority "${keys}/deployer.json" \
+              --keypair "${keys}/deployer.json" \
+              --url "${SOLANA_RPC_URL}" \
+              --max-sign-attempts 20 \
+              --output json | tee "${RUNNER_TEMP}/evidence/deploy.json"
+          fi
+          # The program key only creates the program account; upgrades need
+          # just the upgrade authority. A successful deploy has consumed the buffer.
+          rm -f "${keys}/program.json" "${keys}/buffer.json"
+      - name: Check the deployed program at finalized
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/evidence"
+          solana program show "${PROGRAM_ID}" --url "${SOLANA_RPC_URL}" --commitment confirmed --output json > "${evidence}/program-confirmed.json"
+          want_slot="$(jq -r '.lastDeploySlot' "${evidence}/program-confirmed.json")"
+          for attempt in $(seq 1 60); do
+            if solana program show "${PROGRAM_ID}" --url "${SOLANA_RPC_URL}" --commitment finalized --output json > "${evidence}/program.json" \
+              && [ "$(jq -r '.lastDeploySlot' "${evidence}/program.json")" = "${want_slot}" ]; then
+              break
+            fi
+            if [ "${attempt}" = 60 ]; then
+              echo "::error::the deployment did not reach finalized."
+              exit 1
+            fi
+            sleep 2
+          done
+          owner="$(jq -r '.owner' "${evidence}/program.json")"
+          authority="$(jq -r '.authority' "${evidence}/program.json")"
+          if [ "${owner}" != "${LOADER_V3}" ]; then
+            echo "::error::the program is owned by ${owner}, not loader-v3."
+            exit 1
+          fi
+          if [ "${authority}" != "${DEPLOYER}" ]; then
+            echo "::error::the upgrade authority is ${authority}, not the deployer ${DEPLOYER}."
+            exit 1
+          fi
+          echo "PROGRAM_DATA=$(jq -r '.programdataAddress' "${evidence}/program.json")" >> "${GITHUB_ENV}"
+          echo "DEPLOY_SLOT=$(jq -r '.lastDeploySlot' "${evidence}/program.json")" >> "${GITHUB_ENV}"
+      - name: The onchain program hash equals the verified artifact
+        run: |
+          set -euo pipefail
+          # get-program-hash takes no --arch in solana-verify 0.5.2; the hash
+          # of the deployed bytes does not depend on it.
+          onchain="$(solana-verify --url "${SOLANA_RPC_URL}" get-program-hash "${PROGRAM_ID}")"
+          echo "${onchain}" > "${RUNNER_TEMP}/evidence/program-hash.txt"
+          if [ "${onchain}" != "${PROGRAM_HASH}" ]; then
+            echo "::error::onchain program hash ${onchain} is not the verified artifact's ${PROGRAM_HASH}."
+            exit 1
+          fi
+      - name: Initialize the vaults (one transaction each)
+        run: |
+          set -euo pipefail
+          keys="${RUNNER_TEMP}/keys"
+          evidence="${RUNNER_TEMP}/evidence"
+          # [createAssociatedTokenIdempotent(ata(vault, mint)), initialize], signed by
+          # the upgrade authority; an existing vault that matches the config is kept.
+          npm run --silent admin -- initialize --cluster devnet \
+            --keypair "${keys}/deployer.json" \
+            --skip-existing \
+            --record "${evidence}/vaults.json" > "${evidence}/initialize.json"
+          rm -f "${keys}/deployer.json"
+      - name: verify-from-repo (rebuild from this commit and compare with the chain)
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/evidence/verify-from-repo.log"
+          # solana-verify 0.5.2 then asks whether to upload the verify PDA and
+          # reads one byte from stdin; "n" declines (devnet has no remote
+          # verification, so the evidence is this log and the hash match).
+          printf 'n' | solana-verify --url "${SOLANA_RPC_URL}" verify-from-repo \
+            "https://github.com/${GITHUB_REPOSITORY}" \
+            --commit-hash "${GITHUB_SHA}" \
+            --program-id "${PROGRAM_ID}" \
+            --library-name "${LIBRARY_NAME}" \
+            --base-image "${VERIFY_IMAGE}" \
+            --arch v3 2>&1 | tee "${log}"
+          # 0.5.2 exits 0 even when the hashes differ, so the log is checked.
+          grep -Fqx 'Program hash matches ✅' "${log}"
+          repo_hash="$(sed -n 's/^Executable Program Hash from repo: \([0-9a-f]\{64\}\)$/\1/p' "${log}" | tail -n 1)"
+          chain_hash="$(sed -n 's/^On-chain Program Hash: \([0-9a-f]\{64\}\)$/\1/p' "${log}" | tail -n 1)"
+          if [ "${repo_hash}" != "${PROGRAM_HASH}" ] || [ "${chain_hash}" != "${PROGRAM_HASH}" ]; then
+            echo "::error::verify-from-repo hashes (repo ${repo_hash}, chain ${chain_hash}) are not ${PROGRAM_HASH}."
+            exit 1
+          fi
+      - name: Record the deployment
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/evidence"
+          record="${RUNNER_TEMP}/record"
+          node scripts/deploy-record.ts --cluster devnet \
+            --program-id "${PROGRAM_ID}" \
+            --program-data "${PROGRAM_DATA}" \
+            --upgrade-authority "${DEPLOYER}" \
+            --deploy-slot "${DEPLOY_SLOT}" \
+            --program-hash "${PROGRAM_HASH}" \
+            --so-sha256 "${SO_SHA256}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --commit "${GITHUB_SHA}" \
+            --tag "${GITHUB_REF_NAME}" \
+            --vaults "${evidence}/vaults.json" \
+            --previous deployments/devnet.json \
+            --out-dir "${record}"
+          # The record the founder commits must match the chain at finalized.
+          npm run --silent admin -- show --cluster devnet \
+            --deployment "${record}/deployments/devnet.json" > "${evidence}/show.json"
+      # Only after a failed deploy: the buffer it wrote holds the program's
+      # rent. The deployer is the buffer authority, so closing it returns the
+      # SOL. A buffer that was never created is not an error here.
+      - name: Close the buffer of a failed deploy
+        if: ${{ failure() && steps.deploy.outcome == 'failure' }}
+        run: |
+          set -euo pipefail
+          keys="${RUNNER_TEMP}/keys"
+          if [ ! -f "${keys}/buffer.json" ] || [ ! -f "${keys}/deployer.json" ]; then
+            echo "no deploy buffer to close."
+            exit 0
+          fi
+          buffer="$(solana-keygen pubkey "${keys}/buffer.json")"
+          if solana program close "${buffer}" --keypair "${keys}/deployer.json" --url "${SOLANA_RPC_URL}"; then
+            echo "closed the deploy buffer ${buffer}; its SOL is back with the deployer."
+          else
+            echo "::warning::the deploy buffer ${buffer} was not closed (it may not exist). It can be closed later with the deployer key: solana program close ${buffer}"
+          fi
+      # Before anything is uploaded, and whatever happened above.
+      - name: Delete the key files
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          rm -rf -- "${RUNNER_TEMP}/keys"
+          test ! -e "${RUNNER_TEMP}/keys"
+      - name: No key material in the artifact directories
+        id: scan
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/record" "${RUNNER_TEMP}/evidence"
+          # Defense in depth: no uploaded file may hold a 64-byte key array.
+          if grep -rEl '\[\s*([0-9]{1,3}\s*,\s*){63}[0-9]{1,3}\s*\]' "${RUNNER_TEMP}/record" "${RUNNER_TEMP}/evidence"; then
+            echo "::error::a key-shaped array is in the artifact directory; nothing is uploaded."
+            exit 1
+          fi
+      - name: Upload the deployment record (the founder commits it)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: devnet-deployment
+          path: |
+            ${{ runner.temp }}/record
+            ${{ runner.temp }}/evidence
+          if-no-files-found: error
+          retention-days: 90
+      # A failed run uploads its evidence only (never a record to commit).
+      - name: Upload the evidence of a failed run
+        if: ${{ failure() && steps.scan.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: devnet-deployment-failed-evidence
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: warn
+          retention-days: 30

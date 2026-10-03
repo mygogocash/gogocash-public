@@ -4,7 +4,8 @@
 # the .so before any host-side third-party code runs. A second job, on its own
 # runner, downloads that artifact, proves it has the hash the build job
 # recorded, and runs the LiteSVM suite against it. A release is good only if
-# the whole run is green. It deploys nothing and uses no secrets.
+# the whole run is green. It deploys nothing and uses no secrets; when
+# deploy-devnet.yml calls it, its outputs carry the hashes the deploy checks.
 # See docs/BUILD.md.
 #
 # Hardening rules for every workflow in this repository (same as ci.yml):
@@ -20,12 +21,24 @@ on:
   push:
     tags: ["v*"]
   workflow_dispatch: {}
+  # deploy-devnet.yml calls this workflow, so the program it deploys is the
+  # artifact this run built and hashed for the same commit.
+  workflow_call:
+    outputs:
+      sha256:
+        description: sha256 of gogocash_cashback.so
+        value: ${{ jobs.verifiable-build.outputs.sha256 }}
+      executable_hash:
+        description: solana-verify get-executable-hash of gogocash_cashback.so
+        value: ${{ jobs.verifiable-build.outputs.executable_hash }}
 
 permissions:
   contents: read
 
 concurrency:
-  group: verifiable-build-${{ github.ref }}
+  # github.workflow is the caller's name when deploy-devnet.yml calls this
+  # workflow, so the called run never queues behind the standalone tag run.
+  group: verifiable-build-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -50,6 +63,7 @@ jobs:
     timeout-minutes: 90
     outputs:
       sha256: ${{ steps.hash.outputs.sha256 }}
+      executable_hash: ${{ steps.hash.outputs.executable_hash }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -154,7 +168,13 @@ jobs:
             echo "::error::unexpected sha256sum output: ${sha256}"
             exit 1
           fi
+          executable_hash="$(tr -d '[:space:]' < "${LIBRARY_NAME}.so.executable-hash")"
+          if ! printf '%s' "${executable_hash}" | grep -Eqx '[0-9a-f]{64}'; then
+            echo "::error::unexpected solana-verify get-executable-hash output: ${executable_hash}"
+            exit 1
+          fi
           echo "sha256=${sha256}" >> "${GITHUB_OUTPUT}"
+          echo "executable_hash=${executable_hash}" >> "${GITHUB_OUTPUT}"
       - name: Upload the verifiable build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

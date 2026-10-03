@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "cluster": "devnet",
+  "vaults": [
+    {
+      "name": "usdc",
+      "enabled": true,
+      "mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+      "admin": null,
+      "guardian": null,
+      "claimAuthority": null,
+      "maxPerClaim": "5000000",
+      "maxPerDay": "20000000"
+    },
+    {
+      "name": "demo",
+      "enabled": false,
+      "mint": null,
+      "admin": null,
+      "guardian": null,
+      "claimAuthority": null,
+      "maxPerClaim": "5000000",
+      "maxPerDay": "20000000"
+    }
+  ]
+}

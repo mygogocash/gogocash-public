@@ -118,7 +118,48 @@ compiles and runs build scripts from several hundred crates, which is why it
 runs on a separate runner and only ever sees a copy of the published bytes.
 Treat a release artifact as good only when the whole run is green.
 
-It deploys nothing and uses no secrets.
+It deploys nothing and uses no secrets. `deploy-devnet.yml` calls it
+(`workflow_call`) and reads its `sha256` and `executable_hash` outputs.
+
+## Deploy: `.github/workflows/deploy-devnet.yml`
+
+Runs on `v*` tags (and on manual dispatch with no inputs, which does nothing
+unless the ref is a `v*` tag). It calls `verifiable-build.yml` for the same
+commit, waits for the founder's approval of the `devnet` environment, and
+then, in one job:
+
+1. downloads the `gogocash_cashback-verifiable` artifact of this run and
+   checks its sha256 and its solana-verify executable hash against the build
+   job's outputs, then SBPFv3 and security.txt;
+2. installs the pinned, SHA-256-checked Agave 4.3.0 CLI and solana-verify
+   0.5.2, and checks the RPC's genesis hash is devnet's;
+3. writes `DEVNET_PROGRAM_KEYPAIR` and `DEVNET_DEPLOYER_KEYPAIR` (the only
+   two secrets, environment `devnet`) to files under `umask 077`;
+4. runs `solana program deploy` (loader-v3, upgradeable, the deployer as
+   upgrade authority), unless the program already runs exactly these bytes.
+   The buffer key is generated in the run and passed with `--buffer`, so the
+   CLI never prints an ephemeral buffer key's recovery phrase to the public
+   log; a failed deploy's buffer is closed with the deployer key;
+5. requires `solana-verify get-program-hash` to equal the artifact's hash
+   (solana-verify 0.5.2 has no `--arch` option on this command; it hashes the
+   deployed bytes);
+6. opens each enabled vault of `deploy/vaults.devnet.json` with
+   `npm run admin -- initialize`: one transaction per vault,
+   `[createAssociatedTokenIdempotent, initialize]`, signed by the deployer;
+7. runs `solana-verify verify-from-repo --arch v3` against the tagged commit
+   with the same pinned image, and requires both hashes in its log to match;
+8. writes `deployments/devnet.json` and `release/manifest.json`, checks them
+   against the chain with `npm run admin -- show`, deletes the key files in
+   an `if: always()` step, and uploads them as the `devnet-deployment`
+   artifact. The founder commits it; the workflow never pushes.
+
+`node scripts/check-workflows.ts` (also run by `npm test`) lints every
+workflow for this repository's hardening rules: SHA-pinned actions, no
+`${{ }}` inside `run:`, no `set -x`, secrets only as `NAME: ${{ secrets.NAME }}`
+in one step's `env:` after `umask 077`, an environment and an `always()`
+cleanup for any job with secrets, read-only token, no dispatch inputs and
+checksummed downloads. The operator sequence around the workflow is
+[RUNBOOK-DEVNET.md](RUNBOOK-DEVNET.md).
 
 ### Why the image is pinned by digest
 
@@ -149,9 +190,12 @@ node -e 'const c=require("crypto");const A="123456789ABCDEFGHJKLMNPQRSTUVWXYZabc
 ```
 
 The LiteSVM suite recomputes it in a unit test. Replace it with the real
-program address before any deployment.
+program address before any deployment (contract v0.1;
+[RUNBOOK-DEVNET.md](RUNBOOK-DEVNET.md) step 2 lists the files). The deploy
+workflow refuses the placeholder.
 
-This repository holds no keypair, and the build needs none. Two details:
+This repository holds no keypair, and the build needs none. The deploy keys
+live only in the `devnet` environment's secrets. Two details:
 
 - `anchor build --ignore-keys` skips Anchor's program-id check. Without the
   flag, Anchor creates a keypair to compare against.
