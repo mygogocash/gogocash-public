@@ -76,6 +76,9 @@ ledger marks the payout paid
 | [`src/errors.ts`](src/errors.ts) | Error classification: retry, hold, needs review, already claimed, bug, config |
 | [`src/verify-receipt.ts`](src/verify-receipt.ts) | Receipt verification before a payout is marked paid |
 | [`src/release.ts`](src/release.ts) | The five-condition proof that a stuck payout can never land |
+| [`src/admin/`](src/admin) | Pure builders and checks behind the operator CLI (`npm run admin`) and the keyless verifier (`npm run verify:devnet`) |
+| [`scripts/keygen.ts`](scripts/keygen.ts) | Generates one operator key file (mode 0600, outside git) and prints only its public key |
+| [`.github/workflows/deploy-devnet.yml`](.github/workflows/deploy-devnet.yml) | Deploys the verified build to devnet and opens the vaults ([docs/RUNBOOK-DEVNET.md](docs/RUNBOOK-DEVNET.md)) |
 | [`examples/seeker-wallet.ts`](examples/seeker-wallet.ts) | Example of connecting the member's wallet with Mobile Wallet Adapter (not compiled) |
 | [`test/`](test) | Offline unit tests built from the contract's vectors |
 
